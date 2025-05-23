@@ -2551,8 +2551,8 @@ real_t s3110(struct args_t * func_args)
     initialise_arrays(__func__);
     gettimeofday(&func_args->t1, NULL);
 
-    int xindex, yindex;
-    real_t max, chksum;
+    int xindex = 0, yindex = 0;
+    real_t max = 0.0, chksum = 0.0;
     for (int nl = 0; nl < 100*(iterations/(LEN_2D)); nl++) {
         max = aa[(0)][0];
         xindex = 0;
@@ -2583,8 +2583,8 @@ real_t s13110(struct args_t * func_args)
     initialise_arrays(__func__);
     gettimeofday(&func_args->t1, NULL);
 
-    int xindex, yindex;
-    real_t max, chksum;
+    int xindex = 0, yindex = 0;
+    real_t max = 0.0, chksum = 0.0;
     for (int nl = 0; nl < 100*(iterations/(LEN_2D)); nl++) {
         max = aa[(0)][0];
         xindex = 0;

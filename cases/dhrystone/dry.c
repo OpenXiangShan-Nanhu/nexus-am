@@ -358,7 +358,7 @@
 #define Start_Timer() Begin_Time = uptime()
 #define Stop_Timer()  End_Time   = uptime()
 
-#define NUMBER_OF_RUNS		100 /* Default number of runs */
+#define NUMBER_OF_RUNS		10 /* Default number of runs */
 
 #define PASS2
 

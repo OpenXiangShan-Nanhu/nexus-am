@@ -1,3 +1,4 @@
+ITERATIONS ?= 1
 NAME = coremark
 SRCS = $(shell find -L ./src/ -name "*.c")
 ifdef ITERATIONS

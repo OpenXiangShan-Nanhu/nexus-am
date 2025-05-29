@@ -22,9 +22,8 @@
 
 #define BOOT_ADDR_OFFSET        0x0000UL
 #define PPU_OFFSET              0x1000UL
-#define DACLINT_OFFSET          0x2000UL
 
-#define MSWI_BASE_ADDR          0x01000000UL
+#define CLINT_BASE_ADDR         0x01000000UL
 #define PLIC_BASE_ADDR          0x04000000UL
 #define INTR_GEN_ADDR           0x40070000UL
 

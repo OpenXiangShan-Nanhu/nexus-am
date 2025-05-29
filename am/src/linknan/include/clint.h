@@ -3,10 +3,10 @@
 
 #include "platform.h"
 
-#define MTIME_ADDR(x)          (CPU_SPACE(x) + DACLINT_OFFSET + 0x0)
-#define MTIMECMP_ADDR(x)       (CPU_SPACE(x) + DACLINT_OFFSET + 0x8)
+#define MTIMECMP_ADDR(x)       (CLINT_BASE_ADDR + 0x4000 +  x * 0x8)
+#define MSWI_BASE_ADDR         CLINT_BASE_ADDR
 
-#define TIMER_FREQ              1000000UL
+#define TIMER_FREQ              12000000UL
 
 #define SECOND                  TIMER_FREQ
 #define MILISECOND              (TIMER_FREQ / 1000UL)
@@ -14,6 +14,16 @@
 
 inline float ticks_to_ms(uint64_t timer_val) {
   const uint64_t div = MILISECOND;
+  return (float)timer_val / (float)div;
+}
+
+inline float ticks_to_us(uint64_t timer_val) {
+  const uint64_t div = MICROSECOND;
+  return (float)timer_val / (float)div;
+}
+
+inline float ticks_to_s(uint64_t timer_val) {
+  const uint64_t div = TIMER_FREQ;
   return (float)timer_val / (float)div;
 }
 
@@ -34,12 +44,12 @@ inline uint64_t read_timer() {
   return result;
 }
 
-inline uint64_t read_cpu_mtime(int cpu) {
-  return READ_U64(MTIME_ADDR(cpu));
-}
-
 inline uint64_t read_cpu_mtimecmp(int cpu) {
   return READ_U64(MTIMECMP_ADDR(cpu));
+}
+
+inline void write_cpu_mtimecmp(int cpu, uint64_t mtimecmp) {
+  WRITE_U64(MTIMECMP_ADDR(cpu), mtimecmp);
 }
 
 #endif

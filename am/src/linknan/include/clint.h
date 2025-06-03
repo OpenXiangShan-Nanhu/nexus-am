@@ -37,10 +37,7 @@ inline void clear_ipi(int cpu) {
 
 inline uint64_t read_timer() {
   uint64_t result;
-  asm volatile(
-    "csrr %0, mtime;"
-    : "=r"(result)
-  );
+  asm volatile ("rdtime %0" : "=r"(result));
   return result;
 }
 

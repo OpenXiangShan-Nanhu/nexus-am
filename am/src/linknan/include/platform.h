@@ -31,6 +31,10 @@ inline void riscv_fence() {
   asm volatile("fence");
 }
 
+inline void riscv_fence_i() {
+  asm volatile("fence.i");
+}
+
 inline void riscv_wfi() {
   asm volatile("wfi");
 }

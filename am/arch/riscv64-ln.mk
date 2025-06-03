@@ -1,4 +1,4 @@
-MARCH ?= rv64gc_zba_zbb_zbc_zbs_zbkb_zbkc_zbkx_zknd_zkne_zknh_zkr_zksed_zksh_zkt
+MARCH ?= rv64gc_zifencei_zicsr_zicntr_zba_zbb_zbc_zbs_zbkb_zbkc_zbkx_zknd_zkne_zknh_zkr_zksed_zksh_zkt
 
 include $(AM_HOME)/am/arch/riscv64.mk
 
@@ -9,9 +9,11 @@ AM_SRCS := nemu/common/mainargs.S \
            nemu/isa/riscv/mtime.S \
            nemu/isa/riscv/vme.c \
            noop/common/input.c \
-           noop/common/timer.c \
            noop/isa/riscv/instr.c \
-           nemu/isa/riscv/boot/start.S \
+           linknan/src/clint.c \
+           linknan/asm/start.S \
+           linknan/asm/mtrap.S \
+           linknan/src/mtrap.c \
            linknan/src/trm.c \
            linknan/src/ioe.c \
            linknan/src/ppu.c \

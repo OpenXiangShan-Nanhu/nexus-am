@@ -46,6 +46,16 @@ _start:
   csrr t4, mhartid
   mul t5, t3, t4
   add sp, t5, t1
+  bnez t4, _skip_bss
 
+  la t0, _bss_start
+  la t1, _stack_top
+  beq t0, t1, _skip_bss
+
+_bss_loop:
+  sd zero, (t0)
+  addi t0, t0, 8
+  blt t0, t1, _bss_loop
+
+_skip_bss:
   jal _trm_init
-

@@ -47,6 +47,4 @@ inline uint64_t riscv_mhartid() {
   );
   return result;
 }
-
-void enable_core(uint8_t);
 #endif

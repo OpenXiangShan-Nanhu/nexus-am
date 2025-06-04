@@ -4,13 +4,13 @@
 uint64_t compare_and_swap(volatile uint64_t* addr, uint64_t old_val, uint64_t new_val) {
   uint64_t check = 0;
   uint64_t value = 0;
-  asm volatile (
+  __asm__ volatile (
     "lr.d %[value], (%[addr]);"
     : [value]"=r"(value)
     : [addr]"p"(addr)
   );
   if (value != old_val) return 1;
-  asm volatile (
+  __asm__ volatile (
     "sc.d %[check], %[write], (%[addr]);"
     : [check]"=r"(check)
     : [write]"r"(new_val), [addr]"p"(addr)
@@ -20,7 +20,7 @@ uint64_t compare_and_swap(volatile uint64_t* addr, uint64_t old_val, uint64_t ne
 
 uint64_t atomic_add(volatile uint64_t *addr, uint64_t adder) {
   intptr_t result;
-  asm volatile(
+  __asm__ volatile(
     "amoadd.d %0, %1, (%2);"
     : "=r"(result)
     : "r"(adder), "r"(addr)
@@ -30,7 +30,7 @@ uint64_t atomic_add(volatile uint64_t *addr, uint64_t adder) {
 
 uint64_t atomic_swap(volatile uint64_t *addr, uint64_t swapper) {
   intptr_t result;
-  asm volatile(
+  __asm__ volatile(
     "amoswap.d %0, %1, (%2);"
     : "=r"(result)
     : "r"(swapper), "r"(addr)
@@ -38,15 +38,20 @@ uint64_t atomic_swap(volatile uint64_t *addr, uint64_t swapper) {
   return result;
 }
 
+volatile uint64_t _mstatus = 0;
 void lock(volatile uint64_t *addr) {
-  asm volatile("csrci mstatus, 0x8");
+  uint64_t mstatus;
+  __asm__ volatile ("csrr %0, mstatus" : "=r" (mstatus));
+  _mstatus = mstatus;
+  __asm__ volatile("csrci mstatus, 0x8");
   while(compare_and_swap(addr, 0, 1));
 }
 
 void release(volatile uint64_t *addr) {
   *addr = 0;
-  asm volatile("fence");
-  asm volatile("csrsi mstatus, 0x8");
+  __asm__ volatile("fence");
+  uint64_t mstatus = _mstatus;
+  __asm__ volatile ("csrw mstatus, %0" : : "r" (mstatus));
 }
 
 uint8_t barrier(uint64_t threads) {
@@ -54,7 +59,7 @@ uint8_t barrier(uint64_t threads) {
   static volatile uint64_t flipper = 0;
   uint64_t old_barrier_var;
   uint64_t iam;
-  asm volatile(
+  __asm__ volatile(
     "csrr %0, mhartid;"
     : "=r"(iam)
   );

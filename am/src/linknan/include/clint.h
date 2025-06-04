@@ -3,8 +3,8 @@
 
 #include "platform.h"
 
-#define MTIMECMP_ADDR(x)       (CLINT_BASE_ADDR + 0x4000 +  x * 0x8)
-#define MSWI_BASE_ADDR         CLINT_BASE_ADDR
+#define MTIMECMP_ADDR(x)       (CLINT_BASE_ADDR + 0x4000 + x * 0x8)
+#define MSIP_ADDR(x)           (CLINT_BASE_ADDR + 0x0000 + x * 0x4)
 
 #define TIMER_FREQ              12000000UL
 
@@ -28,11 +28,11 @@ inline float ticks_to_s(uint64_t timer_val) {
 }
 
 inline void raise_ipi(int cpu) {
-  WRITE_U32(MSWI_BASE_ADDR + cpu * 0x4, 0x1);
+  WRITE_U32(MSIP_ADDR(cpu), 0x1);
 }
 
 inline void clear_ipi(int cpu) {
-  WRITE_U32(MSWI_BASE_ADDR + cpu * 0x4, 0x0);
+  WRITE_U32(MSIP_ADDR(cpu), 0x0);
 }
 
 inline uint64_t read_timer() {

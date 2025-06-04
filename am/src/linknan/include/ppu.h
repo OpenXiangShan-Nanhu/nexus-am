@@ -1,5 +1,5 @@
-#ifndef __LINKNAN_DACLINT_H__
-#define __LINKNAN_DACLINT_H__
+#ifndef __LINKNAN_PPU_H__
+#define __LINKNAN_PPU_H__
 
 #include "platform.h"
 

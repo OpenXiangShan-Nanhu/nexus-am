@@ -13,7 +13,7 @@
 void matrix_multiply_uint16_square(
   const uint16_t* restrict A, 
   const uint16_t* restrict B, 
-  uint64_t* restrict Z,
+  volatile uint64_t* restrict Z,
   const uint64_t M, 
   const uint64_t N,
   const uint64_t P
@@ -28,7 +28,7 @@ void matrix_multiply_uint16_square(
 }
 
 int check_result(
-  const uint64_t* restrict result,
+  const volatile uint64_t* restrict result,
   const uint64_t* restrict ref,
   const int64_t size
 ) {

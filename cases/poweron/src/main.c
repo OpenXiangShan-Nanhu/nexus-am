@@ -22,4 +22,5 @@ int main() {
   for(int i = 1; i< NUM_CORES; i++) switch_on_core(i);
   for(int i = 1; i< NUM_CORES; i++) while(done_flags[i] != 1);
   printf("all harts are enabled!\n");
+  return 0;
 }

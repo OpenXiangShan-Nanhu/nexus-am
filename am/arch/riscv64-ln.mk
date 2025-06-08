@@ -10,6 +10,7 @@ AM_SRCS := nemu/common/mainargs.S \
            nemu/isa/riscv/vme.c \
            noop/common/input.c \
            noop/isa/riscv/instr.c \
+           linknan/src/cmo.c \
            linknan/src/intr_gen.c \
            linknan/src/plic.c \
            linknan/src/clint.c \

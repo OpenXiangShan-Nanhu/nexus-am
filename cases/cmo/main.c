@@ -12,26 +12,12 @@
 #define MiB (1024 * 1024)
 #define GiB (1024 * 1024 * 1024)
 
-// #define TEST_RANGE (3 * 1024 * 1024)
-#define TEST_RANGE (1 * KiB)
+// #define TEST_RANGE (3  * MiB)
+#define TEST_RANGE (64 * KiB)
 #define NR_ELEMENTS (TEST_RANGE / 8)
 #define NR_CACHELINE (TEST_RANGE / 64)
 
 volatile uint64_t __attribute__((aligned(64))) test_array[NR_ELEMENTS] = {0};
-
-void invalid() {
-  int64_t i = NR_CACHELINE;
-  while(i --> 0) {
-    riscv_cbo_inval((uint64_t)(&(test_array[i * 8])));
-  }
-}
-
-void flush() {
-  int64_t i = NR_CACHELINE;
-  while(i --> 0) {
-    riscv_cbo_flush((uint64_t)(&(test_array[i * 8])));
-  }
-}
 
 void warm_cache(uint8_t stage) {
   printf("[INFO]: Cache warming up started!\n");
@@ -75,21 +61,21 @@ int main() {
 
   warm_cache(1);
   start_time = read_timer();
-  invalid();
+  mem_invalid((const volatile uint8_t *)test_array, TEST_RANGE);
   end_time = read_timer();
   elapsed_time = end_time - start_time;
   printf("[INFO]: ");
-  print_time(TEST_RANGE);
+  print_size(TEST_RANGE);
   printf(" RO region flush takes ");
   print_time(elapsed_time);
 
   warm_cache(2);
   start_time = read_timer();
-  flush();
+  mem_flush((const volatile uint8_t *)test_array, TEST_RANGE);
   end_time = read_timer();
   elapsed_time = end_time - start_time;
   printf("[INFO]: ");
-  print_time(TEST_RANGE);
+  print_size(TEST_RANGE);
   printf(" RW region flush takes ");
   print_time(elapsed_time);
 

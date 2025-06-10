@@ -19,10 +19,10 @@
 #define PWR_OFF 0
 
 typedef struct {
-  unsigned int pwr_plcy :8;
-  unsigned int rsvd0    :8;
-  unsigned int dyn_en   :8;
-  unsigned int rsvd1    :8;
+  unsigned int pwr_plcy :2;
+  unsigned int rsvd0    :6;
+  unsigned int dyn_en   :1;
+  unsigned int rsvd1    :23;
 } PowerPolicy;
 
 typedef struct {
@@ -53,6 +53,35 @@ typedef union {
   IntrVec intr;
 } ImrUnion;
 
-void switch_on_core(int core);
 
+/**
+ * Switches the specified core to ON power state
+ * @param cpu hart id to operate on
+ * @return 0 for accept
+ */
+int switch_on_core(int cpu);
+
+/**
+ * Switches the specified core to RETENEION power state
+ * @param cpu hart id to operate on
+ * @return 0 for accept, 1 for deny
+ */
+
+int switch_ret_core(int cpu);
+
+/**
+ * Switches the specified core to OFF power state
+ * @param cpu hart id to operate on
+ * @return 0 for accept, 1 for deny
+ */
+int switch_off_core(int cpu);
+
+
+/**
+ * Switches the specified core's power mode to static or dynamic
+ * @param cpu hart id to operate on
+ * @param policy lowest power level
+ * @param mode true for dynamic, false for static
+ */
+void switch_power_mode(int cpu, int mode, int policy);
 #endif

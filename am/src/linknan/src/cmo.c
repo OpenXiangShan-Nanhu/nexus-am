@@ -1,4 +1,5 @@
 #include "cmo.h"
+#include "platform.h"
 
 void mem_invalid(const volatile uint8_t *array, uint64_t size) {
   int64_t i = (size + CACHELINE_SIZE - 1) / CACHELINE_SIZE;

@@ -28,7 +28,7 @@ void intr_handler() {
     riscv_fence();
     if(iter_cnt >= ITERATION) return;
   }
-  raise_ext_intr((intr + 1) % NR_INTR);
+  raise_ext_intr((intr + 1) % (NR_INTR + 1));
 }
 
 void enable_external_intr() {

@@ -4,7 +4,7 @@
 #include "stdint.h"
 
 #define CPU_SPACE_BITS 20
-#define NR_INTR        64
+#define NR_INTR        256
 
 #define READ_U8(addr)        (*((volatile uint8_t *)(addr)))
 #define WRITE_U8(addr, data) (*((volatile uint8_t *)(addr)) = (data))

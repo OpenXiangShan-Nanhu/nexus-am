@@ -24,8 +24,8 @@ static void init_eip() {
 
 void __am_init_cte64() {
   // set delegation (do not deleg illegal instruction exception)
-  asm volatile("csrw mideleg, %0" : : "r"(0xffff));
-  asm volatile("csrw medeleg, %0" : : "r"(0xfffb));
+  // asm volatile("csrw mideleg, %0" : : "r"(0xffff));
+  // asm volatile("csrw medeleg, %0" : : "r"(0xb3fb));
 
   // set PMP to access all memory in S-mode
   // asm volatile("csrw pmpaddr8, %0" : : "r"(-1));
@@ -50,15 +50,18 @@ void __am_init_cte64() {
   // protect 0x240000000 + 0x100
   enable_pmp_TOR(4, 0x2040000000, 0x100, 0, 0);
   //printf("pmp TOR inited\n");
+#elif defined(__ARCH_RISCV64_LN)
+  // enable_pmp(1, 0x80000000, 0x40000000, 0, PMP_R | PMP_W | PMP_X);
+  // enable_pmp(1, 0xc0000000, 0x40000000, 0, PMP_R | PMP_W | PMP_X);
 #else
-  // invalid arch
+  _halt(999);
 #endif
 
   init_machine_exception();
-  init_timer();
-  if(!g_config_disable_timer){
-    enable_timer();
-  }
+  // init_timer();
+  // if(!g_config_disable_timer){
+  //   enable_timer();
+  // }
   init_eip();
 
   // enter S-mode

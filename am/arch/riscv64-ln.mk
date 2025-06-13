@@ -20,6 +20,7 @@ AM_SRCS := nemu/common/mainargs.S \
            linknan/src/trm.c \
            linknan/src/ioe.c \
            linknan/src/ppu.c \
+           linknan/src/pmp.c \
            linknan/src/uartlite.c
 
 CFLAGS  += -I$(AM_HOME)/am/src/nemu/include -I$(AM_HOME)/am/src/linknan/include -DISA_H=\"riscv.h\"

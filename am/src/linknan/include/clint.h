@@ -41,6 +41,12 @@ inline uint64_t read_timer() {
   return result;
 }
 
+inline uint64_t read_cycle() {
+  uint64_t result;
+  asm volatile ("rdcycle %0" : "=r"(result));
+  return result;
+}
+
 inline uint64_t read_cpu_mtimecmp(int cpu) {
   return READ_U64(MTIMECMP_ADDR(cpu));
 }

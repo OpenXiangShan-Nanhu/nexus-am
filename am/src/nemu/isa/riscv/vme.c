@@ -11,14 +11,14 @@ static int vme_enable = 0;
 #define RANGE_LEN(start, len) RANGE((start), (start + len))
 
 static const _Area segments[] = {      // Kernel memory mappings
-#if defined(__ARCH_RISCV64_NOOP) || defined(__ARCH_RISCV64_XS)
+#if defined(__ARCH_RISCV64_NOOP) || defined(__ARCH_RISCV64_XS) || defined(__ARCH_RISCV64_LN)
   RANGE_LEN(0x80000000, 0x8000000), // PMEM
   RANGE_LEN(0x40600000, 0x1000),    // uart
-  RANGE_LEN(CLINT_MMIO, 0x10000),   // clint/timer
-  RANGE_LEN(FB_ADDR,    0x400000),  // vmem
-  RANGE_LEN(SCREEN_ADDR,0x1000),    // vmem
-  RANGE_LEN(0x3c000000, 0x4000000), // PLIC
-  RANGE_LEN(0xc0000000, 0x100000),  // page table test allocates from this position
+  // RANGE_LEN(CLINT_MMIO, 0x10000),   // clint/timer
+  // RANGE_LEN(FB_ADDR,    0x400000),  // vmem
+  // RANGE_LEN(SCREEN_ADDR,0x1000),    // vmem
+  // RANGE_LEN(0x3c000000, 0x4000000), // PLIC
+  // RANGE_LEN(0xc0000000, 0x100000),  // page table test allocates from this position
 #elif defined(__ARCH_RISCV64_XS_SOUTHLAKE) || defined(__ARCH_RISCV64_XS_SOUTHLAKE_FLASH)
   RANGE_LEN(0x2000000000, 0x800000), // PMEM
   RANGE_LEN(0x1f00050000, 0x1000),    // uart
@@ -33,10 +33,14 @@ static const _Area segments[] = {      // Kernel memory mappings
 #endif
 };
 
+static const _Area testing_segment[]={
+  RANGE_LEN(0xc0000000, 0x6000000),
+};
+
 #if __riscv_xlen == 64
 #define USER_SPACE RANGE(0xc0000000, 0xf0000000)
-#define SATP_MODE (8ull << 60)
-#define PTW_CONFIG PTW_SV39
+#define SATP_MODE (9ull << 60)
+#define PTW_CONFIG PTW_SV48
 #else
 #define USER_SPACE RANGE(0x40000000, 0x80000000)
 #define SATP_MODE 0x80000000
@@ -80,6 +84,32 @@ int _vme_init(void* (*pgalloc_f)(size_t), void (*pgfree_f)(void*)) {
     for (; va < segments[i].end; va += PGSIZE) {
       _map(&kas, va, va, PTE_R | PTE_W | PTE_X | PTE_A | PTE_D);
     }
+  }
+
+  set_satp(kas.ptr);
+  vme_enable = 1;
+
+  return 0;
+}
+
+int _vme_init_with_test(void* (*pgalloc_f)(size_t), void (*pgfree_f)(void*)) {
+  pgalloc_usr = pgalloc_f;
+  pgfree_usr = pgfree_f;
+
+  kas.ptr = new_page();
+  int i;
+  for (i = 0; i < LENGTH(segments); i ++) {
+    void *va = segments[i].start;
+    printf("va start %llx, end %llx\n", segments[i].start, segments[i].end);
+    for (; va < segments[i].end; va += PGSIZE) {
+      _map(&kas, va, va, PTE_R | PTE_W | PTE_X | PTE_A | PTE_D);
+    }
+  }
+
+  void *test_va = testing_segment[0].start;
+  printf("test space mapping start %llx, end %llx\n", testing_segment[0].start, testing_segment[0].end);
+  for (; test_va < testing_segment[0].end; test_va += PGSIZE) {
+    _map(&kas, test_va, test_va, PTE_PBMT_NC | PTE_R | PTE_W | PTE_X | PTE_A | PTE_D);
   }
 
   set_satp(kas.ptr);
@@ -151,7 +181,8 @@ void __am_switch(_Context *c) {
  * map va to pa with prot permission with page table root as
  * Note that RISC-V allow hardware to fault when A and D bit is not set
  */
-void _map(_AddressSpace *as, void *va, void *pa, int prot) {
+void _map(_AddressSpace *as, void *va, void *pa, uintptr_t prot) {
+  // printf(" map va %lx to pa %lx with prot %lx\n", (uintptr_t)va, (uintptr_t)pa, prot);
   assert((uintptr_t)va % PGSIZE == 0);
   assert((uintptr_t)pa % PGSIZE == 0);
   PTE *pg_base = as->ptr;

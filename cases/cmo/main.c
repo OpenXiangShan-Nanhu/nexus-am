@@ -13,17 +13,17 @@
 #define GiB (1024 * 1024 * 1024)
 
 // #define TEST_RANGE (3  * MiB)
-#define TEST_RANGE (64 * KiB)
+#define TEST_RANGE (128 * KiB)
 #define NR_ELEMENTS (TEST_RANGE / 8)
 #define NR_CACHELINE (TEST_RANGE / 64)
 
 volatile uint64_t __attribute__((aligned(64))) test_array[NR_ELEMENTS] = {0};
 
+// While flushing starts from tail, warming cache should start from head, in order to flush l1d & l2c first.
 void warm_cache(uint8_t stage) {
   printf("[INFO]: Cache warming up started!\n");
   const uint64_t flag_val = (uint64_t)stage << 55;
-  int64_t i = NR_ELEMENTS;
-  while(i --> 0) {
+  for(uint64_t i = 0; i < NR_ELEMENTS; i ++) {
     test_array[i] = i | flag_val;
   }
   riscv_fence();

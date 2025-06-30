@@ -28,7 +28,7 @@ int switch_ret_core(int cpu) {
   }
   do {
     ps.u32_val = READ_U32(PWSR(cpu));
-  } while(ps.state.dev != ps.state.pcsm);
+  } while(ps.state.dev != pp.policy.pwr_plcy);
 
   if(ps.state.dev == PWR_RET){
     atomic_printf("Core %d is retention!\n", cpu);
@@ -49,7 +49,7 @@ int switch_off_core(int cpu) {
   }
   do {
     ps.u32_val = READ_U32(PWSR(cpu));
-  } while(ps.state.dev != ps.state.pcsm);
+  } while(ps.state.dev != pp.policy.pwr_plcy);
 
   if(ps.state.dev == PWR_OFF){
     atomic_printf("Core %d is powered off!\n", cpu);

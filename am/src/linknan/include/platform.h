@@ -28,6 +28,10 @@
 #define PLIC_BASE_ADDR          0x04000000UL
 #define INTR_GEN_ADDR           0x40070000UL
 
+#define L1D_SIZE 64 * 1024
+#define L2C_SIZE 512 * 1024
+#define L3C_SIZE 8 * 1024 * 1024
+
 inline void riscv_fence() {
   asm volatile("fence");
 }

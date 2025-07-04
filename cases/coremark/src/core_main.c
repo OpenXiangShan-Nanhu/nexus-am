@@ -291,11 +291,11 @@ MAIN_RETURN_TYPE main(int argc, char *argv[]) {
 	/* and report results */
 	ee_printf("CoreMark Size    : %d\n",(int)results[0].size);
 #if HAS_FLOAT
-	ee_printf("Total time (ms)  : %f\n",time_in_secs(total_time));
+	ee_printf("Total time (us)  : %f\n",time_in_secs(total_time));
 	if (time_in_secs(total_time) > 0)
 		ee_printf("Iterations/mSec  : %f\n",default_num_contexts*results[0].iterations/time_in_secs(total_time));
 #else
-	ee_printf("Total time (ms)  : %d\n",time_in_secs(total_time));
+	ee_printf("Total time (us)  : %d\n",time_in_secs(total_time));
 #endif
 	ee_printf("Iterations       : %d\n",(int)default_num_contexts*results[0].iterations);
 	ee_printf("Compiler version : %s\n",COMPILER_VERSION);
@@ -315,7 +315,7 @@ MAIN_RETURN_TYPE main(int argc, char *argv[]) {
 			ee_printf("[%d]crcstate      : 0x%04x\n",i,results[i].crcstate);
 	for (i=0 ; i<default_num_contexts; i++)
 		ee_printf("[%d]crcfinal      : 0x%04x\n",i,results[i].crc);
-  ee_printf("Finished in %d ms.\n", (int)total_time);
+  ee_printf("Finished in %d us.\n", (int)total_time);
 	if (total_errors==0) {
     ee_printf("==================================================\n");
 	ee_printf("CoreMark Iterations/Sec %.2f\n", 

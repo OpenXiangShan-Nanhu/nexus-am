@@ -21,7 +21,7 @@ void warmup(volatile uint64_t *buf) {
 #define CHKB_1 0xAAAAAAAAAAAAAAAA
 void test(volatile uint64_t *buf) {
   for(size_t i = 0; i < (BUF_SIZE - L2C_SIZE) / sizeof(uint64_t); i ++) {
-    buf[i] = (i & 0x1) == 1? CHKB_1: CHKB_0;
+    buf[i] = (i & (0x1 << 5)) == 0? CHKB_0: CHKB_1;
   }
 }
 

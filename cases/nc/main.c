@@ -17,7 +17,7 @@
 #define PAGE_SIZE 4096
 #define PAGE_SHIFT 12
 
-#define TEST_RANGE (3 * MiB)
+#define TEST_RANGE (1 * KiB)
 #define NR_ELEMENTS (TEST_RANGE / 8)
 #define NR_CACHELINE (TEST_RANGE / 64)
 

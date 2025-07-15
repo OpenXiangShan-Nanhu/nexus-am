@@ -58,6 +58,7 @@ void __am_init_cte64() {
 #endif
 
   init_machine_exception();
+  asm volatile("csrw mscratch, 0");
   // init_timer();
   // if(!g_config_disable_timer){
   //   enable_timer();

@@ -1,20 +1,17 @@
-    .global start
+.global start
+
+.macro START_CORE hartid
+    la t0, 0x1000 + \hartid * 0x100000
+    li t1, 2
+    sw t1, 0(t0)
+.endm
+
 start:
     csrr a0, mhartid
-    bnez a0, end
-
-power_on_cores:
-    la a1, 0x101000
-    la a2, 0x201000
-    la a3, 0x301000
-    li a4, 2
-
-    sw a4, 0(a1)
-    sw a4, 0(a2)
-    sw a4, 0(a3)
-
-end:
-    addiw   t0, zero,1
-    slli    t0, t0, 0x1f
-    jr      t0
-
+    bnez a0, run
+    START_CORE 1
+    START_CORE 2
+    START_CORE 3
+run:
+    li t0, 0x80000000
+    jr t0

@@ -2,12 +2,13 @@
 #include <klib.h>
 #include <klib-macros.h>
 #include <printf.h>
-#include "power-test.h"
 #include "clint.h"
 #include "mtrap.h"
 #include "ppu.h"
 #include "csr.h"
 #include "platform.h"
+
+#define NUM_CORES 2
 
 typedef enum {
   UNTEST = -1,
@@ -41,25 +42,9 @@ void other_core(uint64_t id) {
   power_flags[id] = DONE;
   riscv_fence();
 
-  // wait for ret deny test
-  while(power_flags[id] != DENY && power_flags[id] != ACCEPT);
-  if(power_flags[id] == ACCEPT) panic("Error!\n");
-  power_flags[id] = DONE;
-  riscv_fence();
-
-  // wait for off deny test
-  while(power_flags[id] != DENY && power_flags[id] != ACCEPT);
-  if(power_flags[id] == ACCEPT) panic("Error!\n");
-  power_flags[id] = DONE;
-  riscv_fence();
-
-  // wait for ret accrpt test
+  // wait for dyn test
+  while(power_flags[id] != UNTEST);
   riscv_wfi();
-  while(power_flags[id] != ACCEPT);
-
-  // wait for off accrpt test
-  riscv_wfi();
-  while(power_flags[id] != ACCEPT);
 
   atomic_printf("Core %d test finish!\n", id);
   power_flags[id] = FINISH;
@@ -71,35 +56,17 @@ void first_core() {
   for(int i = 1; i < NUM_CORES; i++) power_flags[i] = UNTEST;
   riscv_fence();
 
-  atomic_printf("[1. power on test]\n");  
+  atomic_printf("[1. power on test]\n");
   for(int i = 1; i < NUM_CORES; i++) power_flags[i] = switch_on_core(i);
   riscv_fence();
   for(int i = 1; i < NUM_CORES; i++) while(power_flags[i] != DONE);
 
-  atomic_printf("[2. power ret deny test]\n");
-  for(int i = 1; i < NUM_CORES; i++) power_flags[i] = switch_ret_core(i);
+  atomic_printf("[2. power dyn test]\n");
+  for(int i = 1; i < NUM_CORES; i++) switch_power_mode(i, true, PWR_RET);
+  for(int i = 1; i < NUM_CORES; i++) power_flags[i] = UNTEST;
   riscv_fence();
-  for(int i = 1; i < NUM_CORES; i++) while(power_flags[i] != DONE);
-
-  atomic_printf("[3. power off deny test]\n");
-  for(int i = 1; i < NUM_CORES; i++) power_flags[i] = switch_off_core(i);
-  riscv_fence();
-  for(int i = 1; i < NUM_CORES; i++) while(power_flags[i] != DONE);
-  
-  atomic_printf("[4. power ret accept test]\n");
-  for(volatile int i = 100; i > 0; i--) {}
-  for(int i = 1; i < NUM_CORES; i++) power_flags[i] = switch_ret_core(i);
-  for(int i = 1; i < NUM_CORES; i++) power_flags[i] = switch_on_core(i);
-  riscv_fence();
+  for(int i = 1; i < NUM_CORES; i++) while((READ_U32(PWSR(i)) & 0x3) != PWR_RET);
   for(int i = 1; i < NUM_CORES; i++) raise_ipi(i);
-
-  atomic_printf("[5. power off accept test]\n");
-  for(volatile int i = 100; i > 0; i--) {}
-  for(int i = 1; i < NUM_CORES; i++) power_flags[i] = switch_off_core(i);
-  for(int i = 1; i < NUM_CORES; i++) power_flags[i] = switch_on_core(i);
-  riscv_fence();
-  for(int i = 1; i < NUM_CORES; i++) raise_ipi(i);
-
 
   atomic_printf("Core 0 test finish!\n");
   power_flags[0] = FINISH;

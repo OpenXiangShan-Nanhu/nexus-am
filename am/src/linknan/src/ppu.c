@@ -21,15 +21,24 @@ int switch_on_core(int cpu) {
 int switch_ret_core(int cpu) {
   PwsrUnion ps = {.u32_val = READ_U32(PWSR(cpu))};
   PwprUnion pp = {.u32_val = READ_U32(PWPR(cpu))};
+  ImrUnion imr = {.u32_val = READ_U32(IMR(cpu))};
+  ImrUnion ipr;
 
   if(ps.state.dev == PWR_ON) {
+    imr.intr.stc_evnt = 0;
+    WRITE_U32(IMR(cpu), imr.u32_val);
     pp.policy.pwr_plcy = PWR_RET;
     WRITE_U32(PWPR(cpu), pp.u32_val);
   }
-  do {
-    ps.u32_val = READ_U32(PWSR(cpu));
-  } while(ps.state.dev != pp.policy.pwr_plcy);
 
+  do {
+    ipr.u32_val = READ_U32(IPR(cpu));
+  } while(ipr.intr.stc_evnt == 0);
+
+  ipr.intr.stc_evnt = 0;
+  WRITE_U32(IPR(cpu), ipr.u32_val);
+
+  ps.u32_val = READ_U32(PWSR(cpu));
   if(ps.state.dev == PWR_RET){
     atomic_printf("Core %d is retention!\n", cpu);
     return 0;
@@ -42,15 +51,24 @@ int switch_ret_core(int cpu) {
 int switch_off_core(int cpu) {
   PwsrUnion ps = {.u32_val = READ_U32(PWSR(cpu))};
   PwprUnion pp = {.u32_val = READ_U32(PWPR(cpu))};
+  ImrUnion imr = {.u32_val = READ_U32(IMR(cpu))};
+  ImrUnion ipr;
 
   if(ps.state.dev == PWR_ON) {
+    imr.intr.stc_evnt = 0;
+    WRITE_U32(IMR(cpu), imr.u32_val);
     pp.policy.pwr_plcy = PWR_OFF;
     WRITE_U32(PWPR(cpu), pp.u32_val);
   }
-  do {
-    ps.u32_val = READ_U32(PWSR(cpu));
-  } while(ps.state.dev != pp.policy.pwr_plcy);
 
+  do {
+    ipr.u32_val = READ_U32(IPR(cpu));
+  } while(ipr.intr.stc_evnt == 0);
+
+  ipr.intr.stc_evnt = 0;
+  WRITE_U32(IPR(cpu), ipr.u32_val);
+
+  ps.u32_val = READ_U32(PWSR(cpu));
   if(ps.state.dev == PWR_OFF){
     atomic_printf("Core %d is powered off!\n", cpu);
     return 0;

@@ -19,7 +19,13 @@
 #define WRITE_U64(addr, data) (*((volatile uint64_t *)(addr)) = (data))
 
 #define CPU_SPACE(x) (0x0000000000L | ((x & 0x1f) << CPU_SPACE_BITS))
-#define GET_FIELD(x, off, size) ((x >> off) & ((0x1 << size) - 1))
+
+#define BIT(n) (1UL << (n))
+#define GENMASK(h, l) ((BIT((h)+1) - 1) & ~(BIT(l) - 1))
+#define LSB(val) ((val) & -(val))
+
+#define GET_FIELD(mask, value) ((value) & (mask) / LSB(mask))
+#define SET_FIELD(mask, value) (((value) * LSB(mask)) & (mask))
 
 #define BOOT_ADDR_OFFSET        0x0000UL
 #define PPU_OFFSET              0x1000UL

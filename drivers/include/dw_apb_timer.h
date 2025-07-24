@@ -3,6 +3,7 @@
 
 #include <am.h>
 #include <platform.h>
+#include <stdbool.h>
 
 #define TIMER_BASE(n)           0x50000000L + (n) * 0x10000
 #define APBTMR_N_LOAD_COUNT     0x00
@@ -16,10 +17,14 @@
 #define APBTMR_CONTROL_MODE_PERIODIC    BIT(1)
 #define APBTMR_CONTROL_INT              BIT(2)
 
+
+void timer_set_enable(int timer, bool enable);
+void timer_set_mode(int timer, bool periodic);
+void timer_set_mask(int timer, bool mask);
+void timer_set_count(int timer, uint32_t load_count);
+
 void timer_eoi(int timer);
-void timer_enable_int(int timer);
-void timer_disable_int(int timer);
-void timer_set_periodic(int timer, uint32_t load_count);
 void timer_irq_handler(int timer);
+void timer_init(int timer);
 
 #endif /* __DW_APB_TIMER_H__ */

@@ -111,6 +111,9 @@ enum {
 /* CH_CTL_L */
 #define CH_CTL_L_LAST_WRITE_EN		BIT(30)
 
+#define CH_CTL_L_AR_CACHE_POS		22
+#define CH_CTL_L_AW_CACHE_POS		26			
+
 #define CH_CTL_L_DST_MSIZE_POS		18
 #define CH_CTL_L_SRC_MSIZE_POS		14
 
@@ -141,6 +144,8 @@ enum {
 #define CH_CTL_L_SRC_MAST		BIT(0)
 
 /* CH_CFG_H */
+#define CH_CFG_H_DST_OSR_LMT_POS	27
+#define CH_CFG_H_SRC_OSR_LMT_POS	23
 #define CH_CFG_H_PRIORITY_POS		17
 #define CH_CFG_H_DST_PER_POS		12
 #define CH_CFG_H_SRC_PER_POS		7
@@ -278,7 +283,7 @@ struct dma_desc;
 struct dma_chan;
 struct dma_controller;
 
-typedef void (*dma_callback)(int error_code, void *user_data);
+typedef void (*dma_callback)(int error_code, uint64_t user_data);
 
 struct dma_hcfg {
 	uint32_t	nr_channels;    // Number of channels conifgured for this DMAC hardware: 8
@@ -300,6 +305,8 @@ struct dma_chx_cfg {
     uint8_t dst_burst_len;
 	uint8_t hs_sel_src;
 	uint8_t hs_sel_dst;
+	uint8_t src_osr_lmt;
+	uint8_t dst_osr_lmt;
 	uint8_t prior;
 };
 
@@ -345,7 +352,7 @@ struct dma_desc {
 	
 	struct dma_chan		*chan;
 	dma_callback 	    blk_xfer_callback;
-	void				*user_data;
+	uint64_t			user_data;
 
 	enum xfer_direction		direction;
 	uint32_t			chan_status;
@@ -367,7 +374,9 @@ struct dma_task_queue {
 };
 
 /* USER API */
-extern void dma_init();
-extern int dma_transfer(enum xfer_direction direction, uint64_t src_addr, uint64_t dst_addr, uint32_t length, dma_callback call_back, void *user_data);
+void dma_init();
+int dma_transfer(enum xfer_direction direction, uint64_t src_addr, uint64_t dst_addr, uint32_t length, dma_callback call_back, uint64_t user_data);
+void lock_release(volatile uint64_t *addr);
+void lock_acquire(volatile uint64_t *addr);
 
 #endif /* _AXI_DMA_PLATFORM_H */

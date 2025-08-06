@@ -6,12 +6,14 @@
 #include <xsextra.h>
 #include "dw_axi_dmac.h"
 
+#define NON_EXISTENT_ADDR 0xFFFFFF0000
+
 #define NUM_CORES 4
-#define NUM_TRANSFERS_PER_CORE 4
-#define TRANSFER_SIZE (1024)   // ≤ 200000
+#define NUM_TRANSFERS_PER_CORE 1
+#define TRANSFER_SIZE (32)   // 32 ≤ TRANSFER_SIZE ≤ 200000
 
 static uint8_t src_buffers[NUM_CORES * NUM_TRANSFERS_PER_CORE][TRANSFER_SIZE] __attribute__((aligned(64)));
-static uint8_t dst_buffers[NUM_CORES * NUM_TRANSFERS_PER_CORE][TRANSFER_SIZE] __attribute__((aligned(64)));
+// static uint8_t dst_buffers[NUM_CORES * NUM_TRANSFERS_PER_CORE][TRANSFER_SIZE] __attribute__((aligned(64)));
 static volatile uint64_t xfer_cnt = 0;
 static volatile uintptr_t xfer_cnt_lock = 0;
 
@@ -21,24 +23,23 @@ void dma_test_callback(int error_code, uint64_t user_data){
 
     if (error_code != 0) {
         atomic_printf("Core %d: DMA task failed with hardware error code: %d\n", hartid, error_code);
+        lock_acquire(&xfer_cnt_lock);
+        xfer_cnt++;
+        lock_release(&xfer_cnt_lock);
     } else {
         int mismatch = 0;
-        for(int i = 0; i < TRANSFER_SIZE; i++){
-            if(src_buffers[xferid][i] != dst_buffers[xferid][i]) {
-                atomic_printf("Core %d: !!! DATA MISMATCH !!! Transfer %d failed verification.\n", hartid, xferid);
-                atomic_printf("Xferid:%d, Src Data:0x%x, Dst Data:0x%x, Index:%d\n", xferid, src_buffers[xferid][i], dst_buffers[xferid][i], i);
-                mismatch = 1;
-                break;
-            }
-        }
+        // for(int i = 0; i < TRANSFER_SIZE; i++){
+        //     if(src_buffers[xferid][i] != dst_buffers[xferid][i]) {
+        //         atomic_printf("Core %d: !!! DATA MISMATCH !!! Transfer %d failed verification.\n", hartid, xferid);
+        //         atomic_printf("Xferid:%d, Src Data:0x%x, Dst Data:0x%x, Index:%d\n", xferid, src_buffers[xferid][i], dst_buffers[xferid][i], i);
+        //         mismatch = 1;
+        //         break;
+        //     }
+        // }
 
         if(!mismatch)
             atomic_printf("Core %d: Transfer %d verified successfully.\n", hartid, xferid);
     }
-
-    lock_acquire(&xfer_cnt_lock);
-    xfer_cnt++;
-    lock_release(&xfer_cnt_lock);
 }
 
 int main(){
@@ -51,11 +52,11 @@ int main(){
 
     for(int i = 0; i < NUM_TRANSFERS_PER_CORE; i++){
         xferid = hartid * NUM_TRANSFERS_PER_CORE + i;
-        memset(src_buffers[xferid], (uint8_t)(i + xferid), TRANSFER_SIZE);
-        memset(dst_buffers[xferid], 0, TRANSFER_SIZE);
+        memset(src_buffers[xferid], (uint8_t)(1 + i + xferid), TRANSFER_SIZE);
+        // memset(dst_buffers[xferid], 0, TRANSFER_SIZE);
         do {
             delay_cnt = 1000;
-            ret = dma_transfer(DMA_MEM_TO_MEM, (uintptr_t)src_buffers[xferid], (uintptr_t)dst_buffers[xferid], TRANSFER_SIZE, DWAXIDMAC_AX_CACHE_NONCACHE, DWAXIDMAC_AX_CACHE_NONCACHE, dma_test_callback, xferid);
+            ret = dma_transfer(DMA_MEM_TO_MEM, (uintptr_t)src_buffers[xferid], (uintptr_t)(NON_EXISTENT_ADDR), TRANSFER_SIZE, DWAXIDMAC_AX_CACHE_NONCACHE, DWAXIDMAC_AX_CACHE_NONCACHE, dma_test_callback, xferid);
             while(delay_cnt --);
         }while(ret);
     }

@@ -12,7 +12,7 @@
 #define COMMON_REG_LEN			0x100
 #define CHAN_REG_LEN			0x100
 
-#define TOTAL_LLI_POOL_SIZE     256
+#define TOTAL_LLI_POOL_SIZE     32	// set to 256 if lli is support
 #define TOTAL_DESC_POOL_SIZE    32
 #define TOTAL_QUEUE_NODES       32 
 #define LLI_POOL_BITMAP_SIZE    ((TOTAL_LLI_POOL_SIZE + 31) / 32)
@@ -112,7 +112,14 @@ enum {
 #define CH_CTL_L_LAST_WRITE_EN		BIT(30)
 
 #define CH_CTL_L_AR_CACHE_POS		22
-#define CH_CTL_L_AW_CACHE_POS		26			
+#define CH_CTL_L_AW_CACHE_POS		26		
+
+enum {
+	DWAXIDMAC_AX_CACHE_DEVICE = 0,
+	DWAXIDMAC_AX_CACHE_NONCACHE = 2,
+	DWAXIDMAC_AX_CACHE_CACHEABLE = 15
+};
+
 
 #define CH_CTL_L_DST_MSIZE_POS		18
 #define CH_CTL_L_SRC_MSIZE_POS		14
@@ -375,7 +382,7 @@ struct dma_task_queue {
 
 /* USER API */
 void dma_init();
-int dma_transfer(enum xfer_direction direction, uint64_t src_addr, uint64_t dst_addr, uint32_t length, dma_callback call_back, uint64_t user_data);
+int dma_transfer(enum xfer_direction direction, uint64_t src_addr, uint64_t dst_addr, uint32_t length, uint32_t ar_cache, uint32_t aw_cache, dma_callback call_back, uint64_t user_data);
 void lock_release(volatile uint64_t *addr);
 void lock_acquire(volatile uint64_t *addr);
 

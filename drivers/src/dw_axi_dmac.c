@@ -425,7 +425,7 @@ static void dma_free_lli_chain(struct dma_lli *start_lli, uint32_t num_llc){
     lock_release(&g_lli_pool_lock);
 }
 
-static int dma_prepare_llp(struct dma_desc *desc, uint64_t src_addr, uint64_t dst_addr, uint32_t total_length){
+static int dma_prepare_llp(struct dma_desc *desc, uint64_t src_addr, uint64_t dst_addr, uint32_t total_length, uint32_t ar_cache, uint32_t aw_cache){
     uint32_t num_blocks = 0;
     uint32_t remaining_length = total_length;
     struct dma_lli *current_lli, *prev_lli = NULL;
@@ -454,8 +454,8 @@ static int dma_prepare_llp(struct dma_desc *desc, uint64_t src_addr, uint64_t ds
         dma_xfer_width(current_lli, 32, 32);
         current_lli->ctl_lo |= (DWAXIDMAC_CH_CTL_L_INC << CH_CTL_L_SRC_INC_POS);
         current_lli->ctl_lo |= (DWAXIDMAC_CH_CTL_L_INC << CH_CTL_L_DST_INC_POS);
-        current_lli->ctl_lo |= (0xF << CH_CTL_L_AR_CACHE_POS);
-        current_lli->ctl_lo |= (0xF << CH_CTL_L_AW_CACHE_POS);
+        current_lli->ctl_lo |= (ar_cache << CH_CTL_L_AR_CACHE_POS);
+        current_lli->ctl_lo |= (aw_cache << CH_CTL_L_AW_CACHE_POS);
         current_lli->ctl_hi |= CH_CTL_H_LLI_VALID;
         // current_lli->ctl_hi |= CH_CTL_H_ARLEN_EN;
         // current_lli->ctl_hi |= (DWAXIDMAC_ARWLEN_2 << CH_CTL_H_ARLEN_POS);
@@ -595,11 +595,6 @@ static void chan_xfer_start(struct dma_chan *chan, struct dma_lli *first){
 	irq_mask |= DWAXIDMAC_IRQ_SUSPENDED;
 	chan_irq_set(chan, irq_mask);
 
-    uint32_t chl_lo = READ_U32(chan->base_addr + CH_CTL);
-    chl_lo |= 0xF << CH_CTL_L_AR_CACHE_POS;
-    chl_lo |= 0xF << CH_CTL_L_AW_CACHE_POS;
-    WRITE_U32(chan->base_addr + CH_CTL, chl_lo);
-
     cfx_cfg_write(chan, &config);
 
     /* LLI MODE */
@@ -674,7 +669,7 @@ static void chan_xfer_complete(struct dma_chan *chan, uint64_t chan_status)
 
     if (chan_status & DWAXIDMAC_IRQ_ALL_ERR) {
         error_code = -(int)(chan_status & DWAXIDMAC_IRQ_ALL_ERR);
-        // atomic_printf("DMA task on channel %d completed with error. Status: 0x%llx\n", chan->id, chan_status);
+        atomic_printf("DMA task on channel %d completed with error. Status: 0x%llx\n", chan->id, chan_status);
     }
 
     completed_desc->is_active = false;
@@ -788,21 +783,19 @@ static void dmac_intr_handler(){
 
     /* handle dma transfer errors if any */
     if (chan_status & DWAXIDMAC_IRQ_ALL_ERR) {
-		WRITE_U64(chan->base_addr + CH_INTCLEAR, DWAXIDMAC_IRQ_ALL_ERR);
-        // atomic_printf("DMA Error: Channel:%d Channel interrupt status:0x%llx\n", chan->id, chan_status);
-		// error_code = -(chan_status & DWAXIDMAC_IRQ_ALL_ERR);
+        chan_xfer_complete(chan, chan_status);
+        chan_irq_clear(chan, DWAXIDMAC_IRQ_ALL_ERR);
 	}
 
     /* handle block transfer completion */
     /* block interrupt not support now */
-	if (chan_status & DWAXIDMAC_IRQ_BLOCK_TRF) {
-		WRITE_U64(chan->base_addr + CH_INTCLEAR, DWAXIDMAC_IRQ_ALL_ERR | DWAXIDMAC_IRQ_BLOCK_TRF);
-        // TBD
-	}
+	// if (chan_status & DWAXIDMAC_IRQ_BLOCK_TRF) {
+	// 	WRITE_U64(chan->base_addr + CH_INTCLEAR, DWAXIDMAC_IRQ_ALL_ERR | DWAXIDMAC_IRQ_BLOCK_TRF);
+    //     // TBD
+	// }
     
     /* handle dma transfer completion */
 	if (chan_status & DWAXIDMAC_IRQ_DMA_TRF) {
-		WRITE_U64(chan->base_addr + CH_INTCLEAR, DWAXIDMAC_IRQ_ALL_ERR | DWAXIDMAC_IRQ_DMA_TRF);
         chan_xfer_complete(chan, chan_status);
         chan_irq_clear(chan, DWAXIDMAC_IRQ_DMA_TRF);
 	}
@@ -854,7 +847,7 @@ void dma_init(){
     enable_external_intr();
 }
 
-int dma_transfer(enum xfer_direction direction, uint64_t src_addr, uint64_t dst_addr, uint32_t length, dma_callback call_back, uint64_t user_data){
+int dma_transfer(enum xfer_direction direction, uint64_t src_addr, uint64_t dst_addr, uint32_t length, uint32_t ar_cache, uint32_t aw_cache, dma_callback call_back, uint64_t user_data){
     int ret = 0;
     struct dma_desc *desc;
 
@@ -870,7 +863,7 @@ int dma_transfer(enum xfer_direction direction, uint64_t src_addr, uint64_t dst_
     desc->user_data = user_data;
     desc->is_active = false;
 
-    ret = dma_prepare_llp(desc, src_addr, dst_addr, length);
+    ret = dma_prepare_llp(desc, src_addr, dst_addr, length, ar_cache, aw_cache);
     if(ret){
         dma_free_desc(desc);
         // atomic_printf("Failed to allocate new llp, transfer id : %d\n", user_data);

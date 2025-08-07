@@ -10,6 +10,20 @@ int rand(void) {
   return (unsigned int)(next/65536) % 32768;
 }
 
+uint32_t rand32(void) {
+  next = next * 1103515245 + 12345;
+  return (uint32_t)(next >> 32);
+}
+
+uint32_t rand_in_range(uint32_t min, uint32_t max) {
+  if(min > max)
+    return min;
+
+  uint32_t range = max - min + 1;
+
+  return (rand32() % range) + min;
+}
+
 void srand(unsigned int seed) {
   next = seed;
 }

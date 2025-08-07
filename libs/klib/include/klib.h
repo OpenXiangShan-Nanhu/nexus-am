@@ -65,6 +65,7 @@ int abs(int x);
 unsigned long time();
 void srand(unsigned int seed);
 int rand();
+uint32_t rand_in_range(uint32_t min, uint32_t max);
 void *malloc(size_t size);
 void free(void *ptr);
 

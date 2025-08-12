@@ -38,19 +38,19 @@
 #define L2C_SIZE 512 * 1024
 #define L3C_SIZE 8 * 1024 * 1024
 
-inline void riscv_fence() {
+static inline void riscv_fence() {
   asm volatile("fence");
 }
 
-inline void riscv_fence_i() {
+static inline void riscv_fence_i() {
   asm volatile("fence.i");
 }
 
-inline void riscv_wfi() {
+static inline void riscv_wfi() {
   asm volatile("wfi");
 }
 
-inline uint64_t riscv_mhartid() {
+static inline uint64_t riscv_mhartid() {
   uint64_t result;
   asm volatile(
     "csrr %0, mhartid;"

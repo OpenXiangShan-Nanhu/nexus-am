@@ -17,6 +17,7 @@ void task0() {
   for(volatile int i = 1; i < NUM_CORES; i++) switch_on_core(i);
   switch_ret_core(1);
   step++; // 1
+  riscv_fence();
 }
 
 void task1(uint64_t id) {

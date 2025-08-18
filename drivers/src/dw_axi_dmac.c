@@ -542,6 +542,17 @@ static struct dma_chan *dma_find_free_channel(void){
     return NULL;
 }
 
+static void prefetch2cache(struct dma_chan *chan, struct dma_lli *lli){
+    uint32_t length = chan->active_desc->length;
+    uintptr_t dst_addr = lli->dar;
+
+    const volatile uint8_t *ptr = (const volatile uint8_t *)dst_addr;
+    uint64_t dummy_read __attribute__((unused));
+
+    for(int i = 0; i < length; i++)
+        dummy_read = ptr[i]; 
+}
+
 static void chan_single_block_init(struct dma_chan *chan, struct dma_lli *lli){
     /* CH_SAR */
     WRITE_U64(chan->base_addr + CH_SAR, lli->sar);
@@ -612,6 +623,10 @@ static void chan_xfer_start(struct dma_chan *chan, struct dma_lli *first){
     // // atomic_printf("CFG:%x\n", READ_U64(chan->base_addr + CH_CFG));
     // // atomic_printf("CTL:%x\n", READ_U64(chan->base_addr + CH_CTL));
     
+    #ifdef PREFETCH_DATA_BEFORE_DMA
+        prefetch2cache(chan, first);
+    #endif
+
     dma_chan_enable(chan);
 }
 

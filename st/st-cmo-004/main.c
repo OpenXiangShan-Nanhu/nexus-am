@@ -41,7 +41,7 @@ void dma_test_callback(int error_code, uint64_t user_data){
     int mismatch = 0;
     for(int i = 0; i < transfer_size[hartid][xferid % 200]; i++){
         if(src_buffers[xferid][i] != dst_buffers[dstid][i]) {
-            if(xferid % 2 && xferid / 200 == hartid){
+            if(xferid % 2 == 1 && xferid / NUM_TRANSFERS_PER_CORE == hartid){
                 atomic_printf("Core %d: Transfer %d verified successfully.\n", hartid, xferid);
                 mismatch = 1;
                 break;
@@ -57,7 +57,7 @@ void dma_test_callback(int error_code, uint64_t user_data){
     }
 
     if(!mismatch){
-        if(xferid % 2 && xferid / 200 == hartid){
+        if(xferid % 2 == 1 && xferid / NUM_TRANSFERS_PER_CORE == hartid){
             atomic_printf("Core %d: Transfer %d verified failed!!!\n", hartid, xferid);
             failed = true;
         }

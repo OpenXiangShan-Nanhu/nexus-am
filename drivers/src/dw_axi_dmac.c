@@ -542,6 +542,7 @@ static struct dma_chan *dma_find_free_channel(void){
     return NULL;
 }
 
+#ifdef PREFETCH_DATA_BEFORE_DMA
 static void prefetch2cache(struct dma_chan *chan, struct dma_lli *lli){
     uint32_t length = chan->active_desc->length;
     uintptr_t dst_addr = lli->dar;
@@ -552,6 +553,7 @@ static void prefetch2cache(struct dma_chan *chan, struct dma_lli *lli){
     for(int i = 0; i < length; i++)
         dummy_read = ptr[i]; 
 }
+#endif
 
 static void chan_single_block_init(struct dma_chan *chan, struct dma_lli *lli){
     /* CH_SAR */

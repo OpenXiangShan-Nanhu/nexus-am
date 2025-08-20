@@ -24,7 +24,7 @@ void task0() {
   switch_on_core(1);
 }
 
-void task1(uint64_t id) {
+void task1() {
 
   if(step != 0) { // run at second power-on
     return;

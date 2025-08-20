@@ -69,7 +69,7 @@ void task0() {
   switch_on_core(1);
 }
 
-void task1(uint64_t id) {
+void task1() {
   ipi_init();
   if(m_trap_handler_register(MSIP, ipi_handler)) return;
 

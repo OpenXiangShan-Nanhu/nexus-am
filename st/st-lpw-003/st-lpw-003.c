@@ -20,7 +20,7 @@ void task0() {
   riscv_fence();
 }
 
-void task1(uint64_t id) {
+void task1() {
   while(step != 1);
 }
 

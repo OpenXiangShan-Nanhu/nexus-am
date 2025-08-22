@@ -47,7 +47,7 @@ int main(){
     int ret, delay_cnt;
 
     dma_init();
-    _barrier();
+    barrier(NUM_CORES);
 
     for(int i = 0; i < NUM_TRANSFERS_PER_CORE; i++){
         xferid = hartid * NUM_TRANSFERS_PER_CORE + i;

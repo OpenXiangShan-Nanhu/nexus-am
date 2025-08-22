@@ -77,7 +77,7 @@ int main(){
     int ret, delay_cnt;
 
     dma_init();
-    _barrier();
+    barrier(NUM_CORES);
 
     srand(12345);
 

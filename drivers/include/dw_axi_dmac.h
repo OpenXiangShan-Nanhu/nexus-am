@@ -10,7 +10,7 @@
 #define DMAC_MAX_SLAVES		1
 #define DMAC_MAX_BLK_SIZE	0x200000	// 512KB
 
-#define NUM_DMA_CONTROLLERS		0x6           
+#define NUM_DMA_CONTROLLERS		0x6
 #define COMMON_REG_LEN			0x100
 #define CHAN_REG_LEN			0x100
 

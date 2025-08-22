@@ -90,10 +90,10 @@ int main() {
             }
 
             flag[hartid] = reader_check();
-            _barrier();
+            barrier(NUM_CORES);
 
             xfer_cnt = 0;
-            _barrier();
+            barrier(NUM_CORES);
 
             for(int j = 0; j < NUM_CORES; j++)
                 if(flag[j] == true)
@@ -107,9 +107,9 @@ int main() {
             }
 
             flag[hartid] = reader_check();
-            _barrier();
+            barrier(NUM_CORES);
 
-            _barrier();
+            barrier(NUM_CORES);
         }
     }
 

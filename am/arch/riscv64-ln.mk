@@ -17,6 +17,9 @@ AM_SRCS := nemu/common/mainargs.S \
            linknan/asm/start.S \
            linknan/asm/mtrap.S \
            linknan/src/mtrap.c \
+           linknan/asm/strap.S \
+           linknan/src/strap.c \
+           linknan/src/vmm.c \
            linknan/src/trm.c \
            linknan/src/ioe.c \
            linknan/src/ppu.c \

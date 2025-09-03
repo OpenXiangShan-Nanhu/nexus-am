@@ -84,3 +84,29 @@ uint8_t barrier(uint64_t threads) {
   }
   return 0;
 }
+
+uint8_t s_barrier(uint64_t threads, uint64_t hartid) {
+  static volatile uint64_t barrier_var = 0;
+  static volatile uint64_t flipper = 0;
+  uint64_t old_barrier_var;
+  uint8_t main_thread = 0 == hartid;
+
+  if(main_thread) {
+    atomic_swap(&flipper, 1);
+    while((threads - 1) != barrier_var);
+    old_barrier_var = atomic_swap(&barrier_var, 0);
+    if(old_barrier_var >= threads) return 1;
+    atomic_swap(&flipper, 0);
+    while((threads - 1) != barrier_var);
+    old_barrier_var = atomic_swap(&barrier_var, 0);
+    if(old_barrier_var >= threads) return 1;
+  } else {
+    while(flipper == 0);
+    old_barrier_var = atomic_add(&barrier_var, 1);
+    if(old_barrier_var >= (threads - 1)) return 2;
+    while(flipper == 1);
+    old_barrier_var = atomic_add(&barrier_var, 1);
+    if(old_barrier_var >= (threads - 1)) return 2;
+  }
+  return 0;
+}

@@ -66,7 +66,7 @@ int printf_(const char* format, ...);
 #define atomic_printf atomic_printf_
 int atomic_printf_(const char* format, ...);
 
-
+int s_atomic_printf(const char* format, ...);
 /**
  * Tiny sprintf implementation
  * Due to security reasons (buffer overflow) YOU SHOULD CONSIDER USING (V)SNPRINTF INSTEAD!

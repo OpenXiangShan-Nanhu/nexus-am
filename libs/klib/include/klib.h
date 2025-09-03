@@ -7,6 +7,7 @@
 
 #include <am.h>
 #include <stdarg.h>
+#include <stdint.h>
 #include "printf.h"
 
 //#define __NATIVE_USE_KLIB__
@@ -83,6 +84,7 @@ uint64_t compare_and_swap(volatile uint64_t*, uint64_t, uint64_t);
 void lock(volatile uint64_t *);
 void release(volatile uint64_t *);
 uint8_t barrier(uint64_t);
+uint8_t s_barrier(uint64_t, uint64_t);
 
 // assert.h
 #ifdef NDEBUG

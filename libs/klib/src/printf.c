@@ -883,6 +883,19 @@ int atomic_printf_(const char* format, ...)
   release(&print_lock);
   return ret;
 }
+
+uint64_t compare_and_swap(volatile uint64_t*, uint64_t, uint64_t);
+int s_atomic_printf(const char* format, ...)
+{
+  va_list va;
+  while(compare_and_swap(&print_lock, 0, 1));
+  va_start(va, format);
+  char buffer[1];
+  const int ret = _vsnprintf(_out_char, buffer, (size_t)-1, format, va);
+  va_end(va);
+  print_lock = 0;
+  return ret;
+}
 #else
 int printf_(const char* format, ...)
 {

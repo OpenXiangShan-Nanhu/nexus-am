@@ -139,9 +139,6 @@ void m_switch_mode(uint64_t hartid, uint64_t next_mode, uint64_t next_pc) {
   // csr_write(medeleg, 0xb000);  // delegate page fault exceptions
 
   init_pmp();
-
-  asm volatile("fence" ::: "memory");
-
   asm volatile(
     "mv a0, %0\n"
     "mret;"

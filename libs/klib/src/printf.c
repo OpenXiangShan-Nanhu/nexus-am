@@ -884,16 +884,17 @@ int atomic_printf_(const char* format, ...)
   return ret;
 }
 
+volatile uint64_t s_print_lock = 0;
 uint64_t compare_and_swap(volatile uint64_t*, uint64_t, uint64_t);
 int s_atomic_printf(const char* format, ...)
 {
   va_list va;
-  while(compare_and_swap(&print_lock, 0, 1));
+  while(compare_and_swap(&s_print_lock, 0, 1));
   va_start(va, format);
   char buffer[1];
   const int ret = _vsnprintf(_out_char, buffer, (size_t)-1, format, va);
   va_end(va);
-  print_lock = 0;
+  s_print_lock = 0;
   return ret;
 }
 #else

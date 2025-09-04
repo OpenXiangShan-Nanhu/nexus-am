@@ -56,9 +56,10 @@ void vm_map(void *va, void *pa, uintptr_t prot) {
     }
   }
 
-  if (!(*pte & PTE_V)) {
+  if (!(*pte & PTE_V) || ((uintptr_t)pa >> PGSHFT) != (*pte >> 10)) {
     *pte = PTE_V | prot | ((uintptr_t)pa >> PGSHFT << 10);
   }
+  riscv_fence();
 }
 
 void vm_init(uint64_t addr) {
@@ -67,8 +68,8 @@ void vm_init(uint64_t addr) {
   as.ptr = new_page();
 
   // root page table
-  int page_num = 10;
-  atomic_printf("va start %llx, end %llx\n", (uintptr_t)addr, (uintptr_t)addr + page_num * PGSIZE);
+  int page_num = 0x10;
+  atomic_printf("va %llx --> pa %llx (size %llx)\n", (uintptr_t)addr, (uintptr_t)addr, page_num * PGSIZE);
   for (int i = 0; i < page_num; i++) {
     vm_map((void *)addr + i * PGSIZE, (void *)addr + i * PGSIZE, PTE_R | PTE_W | PTE_X | PTE_A | PTE_D);
   }
@@ -77,12 +78,14 @@ void vm_init(uint64_t addr) {
   int i;
   for (i = 0; i < LENGTH(ln_area); i ++) {
     void *va = ln_area[i].start;
-    atomic_printf("va start %llx, end %llx\n", (uintptr_t)ln_area[i].start, (uintptr_t)ln_area[i].end);
+    atomic_printf("va %llx --> pa %llx (size %llx)\n", (uintptr_t)ln_area[i].start, (uintptr_t)ln_area[i].start, (uintptr_t)ln_area[i].end - (uintptr_t)ln_area[i].start);
     for (; va < ln_area[i].end; va += PGSIZE) {
       vm_map(va, va, PTE_R | PTE_W | PTE_X | PTE_A | PTE_D);
     }
   }
+}
 
+void vm_enable(uint64_t addr) {
   asm volatile("csrw satp, %0" : : "r"(SATP_MODE | addr >> PGSHFT));
   asm volatile("sfence.vma");
 }
@@ -93,7 +96,7 @@ void default_page_fault_handler() {
   uint64_t mtval = csr_read(mtval);
   uint64_t vaddr = mtval & ~0xfff;
   atomic_printf("Page fault at address 0x%lx\n", mtval);
-  atomic_printf("va start %llx, end %llx\n", vaddr, vaddr + PGSIZE);
+  atomic_printf("va %llx --> pa %llx (size %llx)\n", vaddr, vaddr, PGSIZE);
   vm_map((void *)vaddr, (void *)vaddr, PTE_R | PTE_W | PTE_X | PTE_A | PTE_D);
   asm volatile("sfence.vma");
   asm volatile("fence.i");

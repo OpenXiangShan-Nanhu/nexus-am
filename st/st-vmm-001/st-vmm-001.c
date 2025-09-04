@@ -21,7 +21,7 @@ volatile int *reg = (int *)0x90000000;
 
 void ipi_handler() {
   uint64_t id = riscv_mhartid();
-  atomic_printf("Core %d get ipi and sfence.vma\n", id);
+  s_atomic_printf("Core %d get ipi and sfence.vma\n", id);
   asm volatile("sfence.vma");
   asm volatile("fence.i");
   clear_ipi(id);
@@ -43,21 +43,29 @@ void task0(uint64_t hartid) {
   WRITE_U64(reg, 0xdeedbeef);
   step++; // 1
   riscv_fence();
+  s_barrier(NUM_CORES, hartid);
 
   // 4. modifiy map 90000000 -> 98000000
   //    and write 0x12345678 vaddr 0x90000000
   while(step != 4);
+  s_atomic_printf("va %llx --> pa %llx (size %llx)\n", (uintptr_t)reg, (uintptr_t)0x98000000, 0x1000);
   vm_map((void *)reg, (void *)0x98000000, PTE_R | PTE_W | PTE_X | PTE_A | PTE_D);
+  asm volatile("sfence.vma");
   s_atomic_printf("Core %d write 0x12345678 to vaddr 0x90000000\n", hartid);
   for(int i = 1; i < NUM_CORES; i++) { raise_ipi(i); }
   WRITE_U64(reg, 0x12345678);
   step++; // 5
   riscv_fence();
+
+  // 5. read 0x90000000
+  uint64_t val = READ_U64(reg);
+  s_atomic_printf("Core %d read 0x%lx from 0x%lx\n", hartid, val, reg);
 }
 
 void task1(uint64_t hartid) {
   // 3. read 0x90000000
   while(step != 1);
+  s_barrier(NUM_CORES, hartid);
   uint64_t val = READ_U64(reg);
   s_atomic_printf("Core %d read 0x%lx from 0x%lx\n", hartid, val, reg);
   compare_and_swap(&step_lock, 0, 1);
@@ -97,9 +105,9 @@ int main() {
     // 1. map 90000000 -> 90000000
     vm_map((void *)reg, (void *)reg, PTE_R | PTE_W | PTE_X | PTE_A | PTE_D);
   }
-
+  vm_enable(0x84000000);
 
   barrier(NUM_CORES);
   //switch_mode(hartid, MODE_S, (uint64_t)&s_main);
-  m_switch_mode(hartid, MODE_S, (uint64_t)&s_main);
+  switch_mode(hartid, MODE_S, (uint64_t)&s_main);
 }

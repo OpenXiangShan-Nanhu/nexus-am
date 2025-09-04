@@ -15,6 +15,7 @@
 
 #define NUM_CORES 4
 
+volatile uint64_t step_lock = 0;
 volatile int step = 0;
 volatile int *reg = (int *)0x90000000;
 
@@ -38,16 +39,19 @@ int ipi_init() {
 
 void task0(uint64_t hartid) {
   // 2. write 0xdeedbeef to vaddr 0x90000000
+  s_atomic_printf("Core %d write 0xdeedbeef to vaddr 0x90000000\n", hartid);
   WRITE_U64(reg, 0xdeedbeef);
   step++; // 1
   riscv_fence();
 
   // 4. modifiy map 90000000 -> 98000000
   //    and write 0x12345678 vaddr 0x90000000
+  while(step != 4);
   vm_map((void *)reg, (void *)0x98000000, PTE_R | PTE_W | PTE_X | PTE_A | PTE_D);
+  s_atomic_printf("Core %d write 0x12345678 to vaddr 0x90000000\n", hartid);
   for(int i = 1; i < NUM_CORES; i++) { raise_ipi(i); }
   WRITE_U64(reg, 0x12345678);
-  step++; // 2
+  step++; // 5
   riscv_fence();
 }
 
@@ -56,9 +60,13 @@ void task1(uint64_t hartid) {
   while(step != 1);
   uint64_t val = READ_U64(reg);
   s_atomic_printf("Core %d read 0x%lx from 0x%lx\n", hartid, val, reg);
+  compare_and_swap(&step_lock, 0, 1);
+  step++; // 4
+  step_lock = 0;
+  riscv_fence();
 
   // 5. read 0x90000000
-  while(step != 2);
+  while(step != 5);
   val = READ_U64(reg);
   s_atomic_printf("Core %d read 0x%lx from 0x%lx\n", hartid, val, reg);
 }

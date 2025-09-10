@@ -9,13 +9,13 @@
 #include "dw_apb_timer.h"
 #include <stdint.h>
 
-#define TIMER_INTR_SOURCE_BASE 243
+#define TIMER_INTR_SOURCE_BASE 244  // 中断号244开始，对于 plic 输入线为 auto_in_243 开始
 
 volatile uint8_t intr_cnt = 0;
 
 void timer_intr_handler() {
   uint32_t intr = READ_U32(CTX_COMP_REG(0));
-  timer_irq_handler(intr - TIMER_INTR_SOURCE_BASE - 1);
+  timer_irq_handler(intr - TIMER_INTR_SOURCE_BASE);
   WRITE_U32(CTX_COMP_REG(0), intr);
   intr_cnt++;
 
@@ -33,7 +33,7 @@ void enable_external_intr() {
 int setup_plic() {
   plic_init(1);
   if(setup_context(0, 3)) return 1;
-  for(int i = TIMER_INTR_SOURCE_BASE; i <= NR_INTR; i++) {
+  for(int i = TIMER_INTR_SOURCE_BASE; i < NR_INTR; i++) {
     if(setup_intr(i, 7)) return 1;
     if(enable_intr(0, i)) return 1;
   }

@@ -103,17 +103,13 @@ extern char _strap;
 
 void switch_mode(uint64_t hartid, uint64_t next_mode, uint64_t next_pc) {
 
-  atomic_printf("Core %d switch to mode %d\n", hartid, next_mode);
+  s_atomic_printf("Core %d switch to mode %d\n", hartid, next_mode);
 
-  // uint64_t val = csr_read(mstatus);;
-  // val = val | MSTATUS_MPP(next_mode);
   csr_set(mstatus, MSTATUS_SPP(MODE_S));
   csr_write(sepc, next_pc);
 
   csr_write(stvec, &_strap);
   csr_write(sscratch, 0);
-  csr_write(sie, 0);
-  // csr_write(medeleg, 0xb000);  // delegate page fault exceptions
 
   init_pmp();
   asm volatile(

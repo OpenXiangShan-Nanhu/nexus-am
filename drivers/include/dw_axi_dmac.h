@@ -13,6 +13,7 @@
 #define NUM_DMA_CONTROLLERS		0x6
 #define COMMON_REG_LEN			0x100
 #define CHAN_REG_LEN			0x100
+#define CHAN1_BASE              0x100
 
 #define TOTAL_LLI_POOL_SIZE     32	// set to 256 if lli is support
 #define TOTAL_DESC_POOL_SIZE    32
@@ -387,5 +388,12 @@ void dma_init();
 int dma_transfer(enum xfer_direction direction, uint64_t src_addr, uint64_t dst_addr, uint32_t length, uint32_t ar_cache, uint32_t aw_cache, dma_callback call_back, uint64_t user_data);
 void lock_release(volatile uint64_t *addr);
 void lock_acquire(volatile uint64_t *addr);
+
+
+/* Fine grained dmac api, the alternative and simple implementation use for debugging */
+// @param i: dmac id
+void tiny_dma_init(int i);
+void tiny_dma_transfer_single_block(int i, uint64_t src, uint64_t dst, uint32_t length, uint32_t ar_cache, uint32_t aw_cache);
+void default_dma_handler(int i);
 
 #endif /* _AXI_DMA_PLATFORM_H */

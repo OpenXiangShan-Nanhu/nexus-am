@@ -86,7 +86,8 @@ void vm_init(uint64_t addr) {
 }
 
 void vm_enable(uint64_t addr) {
-  asm volatile("csrw satp, %0" : : "r"(SATP_MODE | addr >> PGSHFT));
+  csr_set(menvcfg, (1ULL << 62));
+  csr_write(satp, (SATP_MODE | addr >> PGSHFT));
   asm volatile("sfence.vma");
 }
 

@@ -96,7 +96,7 @@ void default_page_fault_handler() {
   uint64_t mhartid = riscv_mhartid();
   uint64_t mtval = csr_read(mtval);
   uint64_t vaddr = mtval & ~0xfff;
-  atomic_printf("Page fault at address 0x%lx\n", mtval);
+  atomic_printf("Core %d Page fault at address 0x%lx\n", mhartid, mtval);
   atomic_printf("va %llx --> pa %llx (size %llx)\n", vaddr, vaddr, PGSIZE);
   vm_map((void *)vaddr, (void *)vaddr, PTE_R | PTE_W | PTE_X | PTE_A | PTE_D);
   asm volatile("sfence.vma");

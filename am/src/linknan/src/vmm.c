@@ -37,6 +37,45 @@ static inline void *new_page() {
   return p;
 }
 
+/*
+ * map va to pa with prot permission with page table root as
+ * pagetable_level indicates page table level to be used
+ * 0: basic 4KiB page
+ * 1: 2MiB megapage
+ * 2: 1GiB gigapage
+ * Note that RISC-V allow hardware to fault when A and D bit is not set
+ */
+void vm_huge_map(void *va, void *pa, uintptr_t prot, int pagetable_level) {
+  int hugepage_size;
+  switch (pagetable_level) {
+    case 0: hugepage_size = PGSIZE; break; // 4KiB
+    case 1: hugepage_size = PGSIZE * 512; break;  // 2MiB
+    case 2: hugepage_size = PGSIZE * 512 * 512; break;  // 1GiB
+    default: assert(0);
+  }
+  assert((uintptr_t)va % hugepage_size == 0);
+  assert((uintptr_t)pa % hugepage_size == 0);
+  uint64_t *pg_base = as.ptr;
+  uint64_t *pte;
+  int level;
+  for (level = PTW_LEVEL - 1; ; level --) {
+    pte = &pg_base[VPNi((uintptr_t)va, level)];
+    pg_base = (uint64_t *)PTE_ADDR(*pte);
+    if (level == pagetable_level) break;
+    if (!(*pte & PTE_V)) {
+      pg_base = new_page();
+      uint64_t val = PTE_V | ((uintptr_t)pg_base >> PGSHFT << 10);
+      *pte = val;
+    }
+  }
+
+  int hugepage_pn_shift = pagetable_level * 9;
+  if (!(*pte & PTE_V) || ((uintptr_t)pa >> PGSHFT >> hugepage_pn_shift << hugepage_pn_shift) != (*pte >> 10)) {
+    *pte = PTE_V | prot | ((uintptr_t)pa >> PGSHFT >> hugepage_pn_shift << hugepage_pn_shift << 10);
+  }
+  riscv_fence();
+}
+
 void vm_map(void *va, void *pa, uintptr_t prot) {
   // printf("map va %lx to pa %lx with prot %lx\n", (uintptr_t)va, (uintptr_t)pa, prot);
   assert((uintptr_t)va % PGSIZE == 0);

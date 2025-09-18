@@ -39,7 +39,7 @@ void task0() {
 void task1() {
   uint64_t hartid = riscv_mhartid();
   for(int i = 0; i < TEST_SIZE; i++){
-    riscv_cbo_inval((uint64_t)pmem + ((i*CACHE_LINE)%ALL_SIZE));
+    riscv_cbo_flush((uint64_t)pmem + ((i*CACHE_LINE)%ALL_SIZE));
   }
   barrier(NUM_CORES);
   for(int i = 0; i < TEST_SIZE; i++){
@@ -53,7 +53,7 @@ void task1() {
 
 
 void empty(){}
-void (*cpu[NUM_CORES])() = {task0, task0, task0, task0};
+void (*cpu[NUM_CORES])() = {task0, task1, task0, task1};
 
 int main() {
   uint64_t hartid = riscv_mhartid();
@@ -63,8 +63,9 @@ int main() {
       uint64_t addr = (uint64_t)pmem + i * 8;
       WRITE_U64(addr, addr);
     }
+    riscv_fence();
   }
-
+  barrier(NUM_CORES);
   // refill cache
   if(hartid > 0) {
     for(int i = 0; i < ALL_SIZE; i+=CACHE_LINE) {

@@ -73,7 +73,7 @@ void task1() {
 
 
 void empty(){}
-void (*cpu[NUM_CORES])() = {task0, task0, task0, task0};
+void (*cpu[NUM_CORES])() = {task0, task1, task0, task1};
 
 int main() {
   uint64_t hartid = riscv_mhartid();

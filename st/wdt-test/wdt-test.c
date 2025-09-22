@@ -26,7 +26,7 @@ int main() {
 
   dw_wdt_enable();
 
-  if(step > TEST_SIZE){
+  if(step == TEST_SIZE){
     atomic_printf("CPU restart %d times\n", step);
     return 0;
   } else {

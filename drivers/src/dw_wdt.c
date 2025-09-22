@@ -49,7 +49,7 @@ inline void dw_wdt_timeout_period_init_set(const uint32_t timeout_period) {
 }
 
 inline void dw_wdt_counter_restart(){
-    WRITE_U32(0x76, WDT_BASE + WDT_CRR);
+    WRITE_U32(WDT_BASE + WDT_CRR, 0x76);
 }
 
 inline uint32_t dw_wdt_current_counter_value_register_get() {

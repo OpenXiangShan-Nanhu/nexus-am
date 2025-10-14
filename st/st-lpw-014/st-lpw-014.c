@@ -50,6 +50,9 @@ void task1() {
 
 
 void task2() {
+  for(uint64_t addr = 0x80000000; addr < 0x80004000; addr += 0x40) {
+    riscv_cbo_flush(addr);
+  }
   riscv_wfi();
   atomic_printf("Core 2 wake up %d times\n", step);
 }

@@ -1,4 +1,4 @@
-MARCH ?= rv64gc_zifencei_zicsr_zicntr_zba_zbb_zbc_zbs_zbkb_zbkc_zbkx_zknd_zkne_zknh_zkr_zksed_zksh_zkt_zicboz_zicbom_zicbop
+MARCH ?= rv64gc_zifencei_zicsr_zicntr_zicbom
 
 include $(AM_HOME)/am/arch/riscv64.mk
 

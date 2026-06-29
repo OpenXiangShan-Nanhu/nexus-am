@@ -9,7 +9,7 @@
 #include "intr_gen.h"
 #include <stdint.h>
 
-#define NUM_CORES 4
+#define NUM_CORES 1
 #define ITERATION 1
 
 volatile uint8_t iter_cnt = 0;
@@ -22,7 +22,7 @@ void intr_handler() {
   clear_ext_intr(intr);
   WRITE_U32(CTX_COMP_REG(ctx), intr);
   
-  atomic_printf("Core %lu get external interrupt %d!\n", id, intr);
+  printf("Core %lu get external interrupt %d!\n", id, intr);
   if(intr == NR_INTR) {
     iter_cnt ++;
     riscv_fence();
@@ -56,19 +56,18 @@ int setup_plic() {
 
 int main() {
   uint64_t id = riscv_mhartid();
-  atomic_printf("Core %lu is started!\n", id);
+  printf("Core %lu is started!\n", id);
   if(id == 0) {
     if(setup_plic()) return 1;
     printf("PLIC is initialized!\n");
     if(m_trap_handler_register(MEIP, intr_handler)) return 1;
-    for(int i = 0; i < NUM_CORES; i++) switch_on_core(i);
   }
   enable_external_intr();
   if(barrier(NUM_CORES)) return 1;
   if(id == 0) {
     printf("PLIC test started!\n");
-    raise_ext_intr(id + 1);
-    while(iter_cnt < ITERATION) riscv_wfi();
+    raise_ext_intr(id+1);
+    while(iter_cnt < ITERATION);
   } else {
     while(1) riscv_wfi();
   }

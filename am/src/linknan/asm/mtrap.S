@@ -64,6 +64,7 @@
 .align 4
 _mtrap:
   save_regs
+  mv a0, sp
   call _c_mtrap
   restore_regs
   mret

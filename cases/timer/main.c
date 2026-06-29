@@ -44,7 +44,6 @@ int main() {
     return 1;
   }
   while(interval_cnt < (MAX_INTR - 1)) {
-    riscv_wfi();
   }
   printf("Timer check successed!\n");
   return 0;

@@ -37,6 +37,5 @@
 int m_trap_handler_register(uint64_t cause, void handler(void));
 
 void switch_mode(uint64_t hartid, uint64_t next_mode, uint64_t next_pc);
-
 void m_switch_mode(uint64_t hartid, uint64_t next_mode, uint64_t next_pc);
 #endif

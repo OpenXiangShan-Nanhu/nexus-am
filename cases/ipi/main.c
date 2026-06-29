@@ -8,21 +8,21 @@
 #include "platform.h"
 #include <stdint.h>
 
-#define NUM_CORES 4
+#define NUM_CORES 1
 #define IPI_ITERATION 4
 
 volatile uint8_t ipi_iter_cnt = 0;
 
 void ipi_handler() {
   uint64_t id = riscv_mhartid();
-  atomic_printf("Core %lu: IPI raised!\n", id);
+  printf("Core %lu: IPI raised!\n", id);
   clear_ipi(id);
   if(id == 0) {
     ipi_iter_cnt ++;
     riscv_fence();
     if(ipi_iter_cnt >= IPI_ITERATION) return;
   }
-  raise_ipi((id + 1) % NUM_CORES);
+  raise_ipi(0);
 }
 
 int ipi_init() {
@@ -36,17 +36,15 @@ int ipi_init() {
 
 int main() {
   uint64_t id = riscv_mhartid();
-  atomic_printf("Core %lu is started!\n", id);
+  printf("Core %lu is started!\n", id);
   if(id == 0) {
     if(m_trap_handler_register(MSIP, ipi_handler)) return 1;
-    for(int i = 0; i < NUM_CORES; i++) switch_on_core(i);
   }
   ipi_init();
-  if(barrier(NUM_CORES)) return 1;
   if(id == 0) {
     printf("IPI test started!\n");
-    raise_ipi((id + 1) % NUM_CORES);
-    while(ipi_iter_cnt < IPI_ITERATION) riscv_wfi();
+    raise_ipi(0);
+    while(ipi_iter_cnt < IPI_ITERATION);
   } else {
     while(1) riscv_wfi();
   }

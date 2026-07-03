@@ -4,9 +4,11 @@
 .align 4
 __am_timervec:
         csrrw a0, mscratch, a0
-        sd a1, 16(a0)
-        sd a2, 24(a0)
-        sd a3, 32(a0)
+        sw a1, 16(a0)
+        sw a2, 20(a0)
+        sw a3, 24(a0)
+        sw a4, 28(a0)
+        sw a5, 32(a0)
 
         # read mcause
         csrr a1, mcause
@@ -15,21 +17,27 @@ __am_timervec:
         beq a1, a2, is_illegal
         # test whether it's a timer interrupt
         li a2, 1
-        slli a2, a2, 63
-        addi a2, a2, 7
+        slli a2, a2, 31
+        ori a2, a2, 7
         bne a1, a2, is_ext
 
 is_timer:
         # schedule the next timer interrupt
         # by adding interval to mtimecmp.
-        ld a1, 0(a0) # CLINT_MTIMECMP(hart)
-        ld a2, 8(a0) # interval
-        ld a3, 0(a1)
-        add a3, a3, a2
-        sd a3, 0(a1)
+        lw a1, 0(a0)   # CLINT_MTIMECMP(hart) address
+        lw a2, 4(a0)   # interval low
+        lw a3, 8(a0)   # interval high
+        lw a4, 0(a1)   # mtimecmp low
+        lw a5, 4(a1)   # mtimecmp high
+        add a4, a4, a2
+        sltu a2, a4, a2
+        add a5, a5, a3
+        add a5, a5, a2
+        sw a4, 0(a1)
+        sw a5, 4(a1)
 
         # raise a supervisor timer interrupt.
-	li a3, 32
+        li a3, 32
         csrw mip, a3
         j end_of_intr
 
@@ -56,9 +64,11 @@ is_illegal:
         csrw mepc, a3
 
 end_of_intr:
-        ld a3, 32(a0)
-        ld a2, 24(a0)
-        ld a1, 16(a0)
+        lw a5, 32(a0)
+        lw a4, 28(a0)
+        lw a3, 24(a0)
+        lw a2, 20(a0)
+        lw a1, 16(a0)
         csrrw a0, mscratch, a0
 
         mret

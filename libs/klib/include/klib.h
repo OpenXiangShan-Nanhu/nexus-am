@@ -80,11 +80,11 @@ void free(void *ptr);
 
 void qsort(void *base, size_t nmemb, size_t size, int (*compar)(const void *, const void *));
 
-uint64_t compare_and_swap(volatile uint64_t*, uint64_t, uint64_t);
-void lock(volatile uint64_t *);
-void release(volatile uint64_t *);
-uint8_t barrier(uint64_t);
-uint8_t s_barrier(uint64_t, uint64_t);
+uint32_t compare_and_swap(volatile uint32_t*, uint32_t, uint32_t);
+void lock(volatile uint32_t *);
+void release(volatile uint32_t *);
+uint8_t barrier(uint32_t);
+uint8_t s_barrier(uint32_t, uint32_t);
 
 // assert.h
 #ifdef NDEBUG

@@ -1,0 +1,132 @@
+#include <stdint.h>
+#include <am.h>
+#include <klib.h>
+#include <klib-macros.h>
+#include <xsextra.h>
+#include "csr.h"
+#include "riscv.h"
+#include "platform.h"
+
+void default_trap_handler() {
+  uint32_t mhartid = csr_read(mhartid);
+  uint32_t mcause = csr_read(mcause);
+  int is_interrupt = (mcause & (1U << 31)) >> 31;
+  uint32_t code = mcause & (~(1U << 31));
+  if (is_interrupt) {
+    switch (code) {
+      case 0: atomic_printf("Core %d User software interrupt\n", mhartid); break;
+      case 1: atomic_printf("Core %d Supervisor software interrupt\n", mhartid); break;
+      case 3: atomic_printf("Core %d Machine software interrupt\n", mhartid); break;
+      case 4: atomic_printf("Core %d User timer interrupt\n", mhartid); break;
+      case 5: atomic_printf("Core %d Supervisor timer interrupt\n", mhartid); break;
+      case 7: atomic_printf("Core %d Machine timer interrupt (MTIP is asserted!)\n", mhartid); break;
+      case 8: atomic_printf("Core %d User external interrupt\n", mhartid); break;
+      case 9: atomic_printf("Core %d Supervisor external interrupt\n", mhartid); break;
+      case 11: atomic_printf("Core %d Machine external interrupt (MEIP is asserted!)\n", mhartid); break;
+      default: atomic_printf("Core %d Reserved interrupt code\n", mhartid); break;
+    }
+  } else {
+    switch (code) {
+      case 0: atomic_printf("Core %d Instruction address misaligned\n", mhartid); break;
+      case 1: atomic_printf("Core %d Instruction access fault\n", mhartid); break;
+      case 2: atomic_printf("Core %d Illegal instruction\n", mhartid); break;
+      case 3: atomic_printf("Core %d Breakpoint\n", mhartid); break;
+      case 4: atomic_printf("Core %d Load address misaligned\n", mhartid); break;
+      case 5: atomic_printf("Core %d Load access fault\n", mhartid); break;
+      case 6: atomic_printf("Core %d Store/AMO address misaligned\n", mhartid); break;
+      case 7: atomic_printf("Core %d Store/AMO access fault\n", mhartid); break;
+      case 8: atomic_printf("Core %d Environment call from U-mode\n", mhartid); break;
+      case 9: atomic_printf("Core %d Environment call from S-mode\n", mhartid); break;
+      case 11: atomic_printf("Core %d Environment call from M-mode\n", mhartid); break;
+      case 12: atomic_printf("Core %d Instruction page fault\n", mhartid); break;
+      case 13: atomic_printf("Core %d Load page fault\n", mhartid); break;
+      case 15: atomic_printf("Core %d Store/AMO page fault\n", mhartid); break;
+      default: atomic_printf("Core %d Reserved exception code\n", mhartid); break;
+    }
+  }
+  uint32_t mepc = csr_read(mepc);
+  uint32_t mtval = csr_read(mtval);
+  atomic_printf("mepc: 0x%lx, mtval: 0x%lx mcause: 0x%lx\n", mepc, mtval, mcause);
+}
+
+void (*intr_handler_vector[16])(void) = {
+  default_trap_handler, default_trap_handler, default_trap_handler, default_trap_handler,
+  default_trap_handler, default_trap_handler, default_trap_handler, default_trap_handler,
+  default_trap_handler, default_trap_handler, default_trap_handler, default_trap_handler,
+  default_trap_handler, default_trap_handler, default_trap_handler, default_trap_handler
+};
+
+void (*ecpt_handler_vector[16])(void) = {
+  default_trap_handler, default_trap_handler, default_trap_handler, default_trap_handler,
+  default_trap_handler, default_trap_handler, default_trap_handler, default_trap_handler,
+  default_trap_handler, default_trap_handler, default_trap_handler, default_trap_handler,
+  default_trap_handler, default_trap_handler, default_trap_handler, default_trap_handler
+};
+
+void _c_mtrap() {
+  uint32_t mcause = csr_read(mcause);
+  int is_interrupt = (mcause & (1U << 31)) >> 31;
+  uint32_t code = mcause & (~(1U << 31));
+  if(code > 16) {
+    atomic_printf("Illegal mcause code %lu\n", code);
+    return;
+  }
+  if(is_interrupt) {
+    intr_handler_vector[code]();
+  } else {
+    ecpt_handler_vector[code]();
+  }
+}
+
+int m_trap_handler_register(uint32_t cause, void handler(void)) {
+  int is_interrupt = (cause & (1U << 31)) >> 31;
+  uint32_t code = cause & (~(1U << 31));
+  if(code > 16) {
+    atomic_printf("Illegal intr code %lu, will not be register\n", code);
+    return 1;
+  } else if(is_interrupt) {
+    atomic_printf("Registering interrupt %lu handler!\n", code);
+    intr_handler_vector[code] = handler;
+    riscv_fence();
+    riscv_fence_i();
+    return 0;
+  } else {
+    atomic_printf("Registering exception %lu handler!\n", code);
+    ecpt_handler_vector[code] = handler;
+    riscv_fence();
+    riscv_fence_i();
+    return 0;
+  }
+}
+
+extern char _strap;
+
+void switch_mode(uint32_t hartid, uint32_t next_mode, uint32_t next_pc) {
+  s_atomic_printf("Core %d switch to mode %d\n", hartid, next_mode);
+  csr_set(mstatus, MSTATUS_SPP(MODE_S));
+  csr_write(sepc, next_pc);
+  csr_write(stvec, &_strap);
+  csr_write(sscratch, 0);
+  init_pmp();
+  asm volatile(
+    "mv a0, %0\n"
+    "sret;"
+    : : "r"(hartid) : "memory");
+}
+
+void m_switch_mode(uint32_t hartid, uint32_t next_mode, uint32_t next_pc) {
+  atomic_printf("Core %d switch to mode %d\n", hartid, next_mode);
+  uint32_t val = csr_read(mstatus);
+  val = val & (~MSTATUS_MPP(MODE_M));
+  val = val | MSTATUS_MPP(next_mode);
+  csr_write(mstatus, val);
+  csr_write(mepc, next_pc);
+  csr_write(stvec, &_strap);
+  csr_write(sscratch, 0);
+  csr_write(sie, 0);
+  init_pmp();
+  asm volatile(
+    "mv a0, %0\n"
+    "mret;"
+    : : "r"(hartid) : "memory");
+}

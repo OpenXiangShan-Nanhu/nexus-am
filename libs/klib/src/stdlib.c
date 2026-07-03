@@ -12,7 +12,7 @@ int rand(void) {
 
 uint32_t rand32(void) {
   next = next * 1103515245 + 12345;
-  return (uint32_t)(next >> 32);
+  return (uint32_t)(next >> 16);
 }
 
 uint32_t rand_in_range(uint32_t min, uint32_t max) {
@@ -47,7 +47,7 @@ static struct {
   uintptr_t size;
 } last = { .ptr = NULL, .size = 0 };
 
-volatile uint64_t malloc_lock = 0;
+volatile uint32_t malloc_lock = 0;
 
 void *malloc(size_t size) {
   lock(&malloc_lock);

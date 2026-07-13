@@ -1,7 +1,7 @@
 .global start
 
 .macro START_CORE hartid
-    la t0, 0x1000 + \hartid * 0x100000
+    la t0, 0x200000 + \hartid * 0x10000
     li t1, 2
     sw t1, 0(t0)
 .endm

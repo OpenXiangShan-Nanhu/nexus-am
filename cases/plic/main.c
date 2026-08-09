@@ -6,29 +6,48 @@
 #include "ppu.h"
 #include "csr.h"
 #include "platform.h"
-#include "intr_gen.h"
 #include <stdint.h>
 
 #define NUM_CORES 4
-#define ITERATION 1
+#define NUM_SOURCES 4
+#define EXPECTED_DELIVERIES (NUM_SOURCES + 1)
 
-volatile uint8_t iter_cnt = 0;
+static volatile uint32_t delivery_count = 0;
+static volatile uint32_t test_done = 0;
+static volatile uint32_t test_failed = 0;
+
+static void switch_on_core_quiet(uint32_t cpu) {
+  PwsrUnion state = {.u32_val = READ_U32(PWSR(cpu))};
+  PwprUnion policy = {.u32_val = READ_U32(PWPR(cpu))};
+  if(state.state.dev != PWR_ON) {
+    policy.policy.pwr_plcy = PWR_ON;
+    WRITE_U32(PWPR(cpu), policy.u32_val);
+  }
+  do {
+    state.u32_val = READ_U32(PWSR(cpu));
+  } while(state.state.dev != PWR_ON);
+}
 
 void intr_handler() {
-  uint64_t id = riscv_mhartid();
-  uint32_t ctx = id * 2;
+  uint32_t hart = riscv_mhartid();
+  uint32_t intr = imsic_claim_machine();
+  uint32_t expected_intr = delivery_count % NUM_SOURCES + 1;
 
-  uint32_t intr = READ_U32(CTX_COMP_REG(ctx));
-  clear_ext_intr(intr);
-  WRITE_U32(CTX_COMP_REG(ctx), intr);
-  
-  atomic_printf("Core %lu get external interrupt %d!\n", id, intr);
-  if(intr == NR_INTR) {
-    iter_cnt ++;
+  if (intr != expected_intr || hart != expected_intr - 1) {
+    test_failed = 1;
+    test_done = 1;
     riscv_fence();
-    if(iter_cnt >= ITERATION) return;
+    if (hart != 0) aplic_set_pending(1);
+    return;
   }
-  raise_ext_intr((intr + 1) % (NR_INTR + 1));
+
+  delivery_count++;
+  riscv_fence();
+  if (delivery_count == EXPECTED_DELIVERIES) {
+    test_done = 1;
+  } else {
+    aplic_set_pending(intr % NUM_SOURCES + 1);
+  }
 }
 
 void enable_external_intr() {
@@ -39,38 +58,33 @@ void enable_external_intr() {
   csr_write(mstatus, mstatus | (0x1UL << 3));
 }
 
-int setup_plic() {
-  plic_init(NUM_CORES);
-  for(int i = 1; i <= NR_INTR; i++) if(setup_intr(i, 7)) return 1;
-  for(int i = 0; i < NUM_CORES; i++) {
-    uint32_t ctx = i * 2;
-    if(setup_context(ctx, 3)) return 1;
-    for(int j = 1; j <= NR_INTR; j ++) {
-      if(j % NUM_CORES == i) {
-        if(enable_intr(ctx, j)) return 1;
-      }
-    }
+int setup_aplic() {
+  aplic_init(NUM_SOURCES);
+  for (uint32_t i = 1; i <= NUM_SOURCES; i++) {
+    if (aplic_config_source(i, (i - 1) % NUM_CORES, i)) return 1;
+    if (aplic_enable_source(i)) return 1;
   }
   return 0;
 }
 
 int main() {
   uint64_t id = riscv_mhartid();
-  atomic_printf("Core %lu is started!\n", id);
   if(id == 0) {
-    if(setup_plic()) return 1;
-    printf("PLIC is initialized!\n");
-    if(m_trap_handler_register(MEIP, intr_handler)) return 1;
-    for(int i = 0; i < NUM_CORES; i++) switch_on_core(i);
+    if(setup_aplic()) return 1;
+    if(m_trap_handler_register_quiet(MEIP, intr_handler)) return 1;
+    for(int i = 1; i < NUM_CORES; i++) switch_on_core_quiet(i);
   }
+  imsic_enable_machine(id + 1);
   enable_external_intr();
   if(barrier(NUM_CORES)) return 1;
   if(id == 0) {
-    printf("PLIC test started!\n");
-    raise_ext_intr(id + 1);
-    while(iter_cnt < ITERATION) riscv_wfi();
+    aplic_set_pending(1);
+    while(!test_done) riscv_wfi();
+    riscv_fence();
+    if(test_failed || delivery_count != EXPECTED_DELIVERIES) return 1;
+    printf("APLIC/IMSIC four-core test PASS\n");
   } else {
     while(1) riscv_wfi();
   }
-  printf("PLIC test passed!\n");
+  return 0;
 }

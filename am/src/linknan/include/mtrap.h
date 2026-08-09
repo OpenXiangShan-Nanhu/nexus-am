@@ -35,6 +35,7 @@
 #define STORE_PAGE_FAULT (EXCP | 15)
 
 int m_trap_handler_register(uint64_t cause, void handler(void));
+int m_trap_handler_register_quiet(uint64_t cause, void handler(void));
 
 void switch_mode(uint64_t hartid, uint64_t next_mode, uint64_t next_pc);
 

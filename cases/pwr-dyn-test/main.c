@@ -8,7 +8,7 @@
 #include "csr.h"
 #include "platform.h"
 
-#define NUM_CORES 2
+#define NUM_CORES 4
 
 typedef enum {
   UNTEST = -1,

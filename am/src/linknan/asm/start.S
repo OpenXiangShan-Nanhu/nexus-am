@@ -3,6 +3,7 @@
 .type _start, @function
 .extern _mtrap
 #define MSTATUS_FS 0x00006000
+#define MNSTATUS_NMIE 0x8
 
 .macro set_reg_zero reg_idx
   mv x\reg_idx, zero
@@ -37,6 +38,10 @@ _start:
   csrwi fcsr, 0
   la t0, _mtrap
   csrw mtvec, t0
+
+  # Nanhu 5.2 resets mnstatus.NMIE to 0, which masks all regular interrupts.
+  li t0, MNSTATUS_NMIE
+  csrs 0x744, t0
 
   init_fregs # init fregs after fp enable
 

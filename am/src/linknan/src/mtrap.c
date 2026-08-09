@@ -99,6 +99,20 @@ int m_trap_handler_register(uint64_t cause, void handler(void)) {
   }
 }
 
+int m_trap_handler_register_quiet(uint64_t cause, void handler(void)) {
+  int is_interrupt = (cause & (1UL << 63)) >> 63;
+  uint64_t code = cause & (~(1UL << 63));
+  if(code > 16) return 1;
+  if(is_interrupt) {
+    intr_handler_vector[code] = handler;
+  } else {
+    ecpt_handler_vector[code] = handler;
+  }
+  riscv_fence();
+  riscv_fence_i();
+  return 0;
+}
+
 extern char _strap;
 
 void switch_mode(uint64_t hartid, uint64_t next_mode, uint64_t next_pc) {

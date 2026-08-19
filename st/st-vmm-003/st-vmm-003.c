@@ -23,15 +23,19 @@ volatile void *reg = (int *)0x90000000;
 volatile void *dma_src = (int *)0xa0000000;
 
 void ipi_handler() {
+  if (imsic_ipi_claim() != IPI_EIID) {
+    default_trap_handler();
+    return;
+  }
   uint64_t id = riscv_mhartid();
   s_atomic_printf("Core %d get ipi and sfence.vma\n", id);
   asm volatile("sfence.vma");
   asm volatile("fence.i");
-  clear_ipi(id);
 }
 
 int ipi_init() {
-  csr_set(mie, MSIE);
+  imsic_ipi_enable();
+  csr_set(mie, MEIE);
   csr_set(mstatus, (0x1UL << 3));
   return 0;
 }
@@ -123,7 +127,7 @@ int main() {
   m_trap_handler_register(INS_PAGE_FAULT, default_page_fault_handler);
   m_trap_handler_register(LOAD_PAGE_FAULT, default_page_fault_handler);
   m_trap_handler_register(STORE_PAGE_FAULT, default_page_fault_handler);
-  m_trap_handler_register(MSIP, ipi_handler);
+  m_trap_handler_register(MEIP, ipi_handler);
   ipi_init();
 
   if (hartid == 0) {

@@ -17,13 +17,17 @@ volatile int step = 0;
 volatile void *reg = (void *)0x90000000;
 
 void ipi_handler() {
+  if (imsic_ipi_claim() != IPI_EIID) {
+    default_trap_handler();
+    return;
+  }
   uint64_t id = riscv_mhartid();
   atomic_printf("Core %d get ipi!\n", id);
-  clear_ipi(id);
 }
 
 int ipi_init() {
-  csr_set(mie, MSIE);
+  imsic_ipi_enable();
+  csr_set(mie, MEIE);
   csr_set(mstatus, (0x1UL << 3));
   return 0;
 }
@@ -63,7 +67,7 @@ int main() {
 
   if(hartid == 1){
     ipi_init();
-    if(m_trap_handler_register(MSIP, ipi_handler)) return -1;
+    if(m_trap_handler_register(MEIP, ipi_handler)) return -1;
     for(int i = 0; i < TEST_SIZE; i++){
       WRITE_U64(reg + i * 0x40, (uint64_t)reg + i * 0x40);
     }

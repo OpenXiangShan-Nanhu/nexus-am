@@ -34,6 +34,8 @@
 #define LOAD_PAGE_FAULT  (EXCP | 13)
 #define STORE_PAGE_FAULT (EXCP | 15)
 
+void default_trap_handler(void);
+
 int m_trap_handler_register(uint64_t cause, void handler(void));
 int m_trap_handler_register_quiet(uint64_t cause, void handler(void));
 

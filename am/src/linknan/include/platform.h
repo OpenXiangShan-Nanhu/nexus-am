@@ -33,8 +33,15 @@
 #define TIMER_OFFSET            0x2000UL
 #define MTIME_OFFSET            0x0000UL
 #define MTIMECMP_OFFSET         0x0008UL
-#define MSIP_OFFSET             0x0010UL
-#define SSIP_OFFSET             0x0018UL
+/* ACLINT no longer implements MSWI/SSWI; IPIs go through the IMSIC.
+ * NOTE: this design's IMSIC register map (ChiselAIA RegGen) places seteipnum
+ * at interrupt-file offset +0x0 (the APLIC uses the same convention), which
+ * differs from the AIA-spec offset +0x80. */
+#define IMSIC_OFFSET            0x10000UL
+#define IMSIC_S_FILE_OFFSET     0x00000UL
+#define IMSIC_M_FILE_OFFSET     0x08000UL
+#define IMSIC_SETEIPNUM_OFFSET  0x00000UL
+#define IMSIC_CLREIPNUM_OFFSET  0x00088UL
 
 #define PLIC_BASE_ADDR          0x38050000UL
 #define INTR_GEN_ADDR           0x40070000UL

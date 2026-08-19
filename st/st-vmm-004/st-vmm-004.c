@@ -27,10 +27,15 @@ volatile int *reg = (int *)0x90000000;
 volatile int ei_lock = 1;
 
 // --- ipi
+void m_timer_handler(void);
+
 void m_ipi_inject() {
-  uint64_t id = riscv_mhartid();
-  clear_ipi(id);
-  csr_set(mip, SSIE);
+  if (imsic_ipi_claim() == IPI_EIID) {
+    csr_set(mip, SSIE);
+    return;
+  }
+  // not an IPI: pass through to the wired-external-interrupt handler
+  m_timer_handler();
 }
 
 
@@ -49,7 +54,8 @@ void s_ipi_handler() {
 }
 
 int ipi_init() {
-  csr_set(mie, MSIE);
+  imsic_ipi_enable();
+  csr_set(mie, MEIE);
   csr_set(mideleg, SSIE);
   csr_set(sie, SSIE);
   csr_set(sstatus, (0x1UL << 1) | (0x1UL << 5));
@@ -137,8 +143,7 @@ int main() {
 
   // -- core 1 enable timer irq and ipi irq
   if(hartid == 1) {
-    m_trap_handler_register(MEIP, m_timer_handler);
-    m_trap_handler_register(MSIP, m_ipi_inject);
+    m_trap_handler_register(MEIP, m_ipi_inject);
     s_trap_handler_register(SSIP, s_ipi_handler);
     ipi_init();
     ei_enable();

@@ -23,11 +23,12 @@ static volatile int cores_ready = 0;
 static volatile int next_target[NUM_CORES] = {1, 2, 3, 0};
 
 void ipi_handler() {
+    if (imsic_ipi_claim() != IPI_EIID) {
+      default_trap_handler();
+      return;
+    }
     uint64_t hartid = riscv_mhartid();
-    
-    // 清除当前核心的IPI
-    clear_ipi(hartid);
-    
+
     // 增加接收计数
     ipi_received_count[hartid]++;
     wakeup_count[hartid]++;
@@ -41,9 +42,10 @@ void ipi_handler() {
 }
 
 int ipi_init() {
-    // 启用机器模式软件中断
+    // 启用机器模式外部中断（IPI经IMSIC MSI投递）
+    imsic_ipi_enable();
     uint64_t mie = csr_read(mie);
-    csr_write(mie, mie | MSIE);
+    csr_write(mie, mie | MEIE);
 
     // 启用全局中断
     uint64_t mstatus = csr_read(mstatus);
@@ -136,7 +138,7 @@ int main() {
     }
     
     // 注册IPI中断处理器
-    if (m_trap_handler_register(MSIP, ipi_handler)) {
+    if (m_trap_handler_register(MEIP, ipi_handler)) {
         atomic_printf("Core %d: Failed to register IPI handler\n", hartid);
         return 1;
     }

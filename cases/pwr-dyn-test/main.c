@@ -22,13 +22,16 @@ typedef enum {
 volatile flag_t power_flags[NUM_CORES];
 
 void ipi_handler() {
-  uint64_t id = riscv_mhartid();
-  clear_ipi(id);
+  if (imsic_ipi_claim() != IPI_EIID) {
+    default_trap_handler();
+    return;
+  }
 }
 
 int ipi_init() {
+  imsic_ipi_enable();
   uint64_t mie = csr_read(mie);
-  csr_write(mie, mie | MSIE);
+  csr_write(mie, mie | MEIE);
 
   uint64_t mstatus = csr_read(mstatus);
   csr_write(mstatus, mstatus | (0x1UL << 3));
@@ -36,8 +39,8 @@ int ipi_init() {
 }
 
 void other_core(uint64_t id) {
+  if(m_trap_handler_register(MEIP, ipi_handler)) return ;
   ipi_init();
-  if(m_trap_handler_register(MSIP, ipi_handler)) return ;
   while(power_flags[id] == UNTEST);
   power_flags[id] = DONE;
   riscv_fence();

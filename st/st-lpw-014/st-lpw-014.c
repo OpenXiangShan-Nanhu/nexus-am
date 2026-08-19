@@ -18,13 +18,17 @@ volatile void *pmem1 = (void *)0x90000000;
 volatile void *pmem2 = (void *)0xa0000000;
 
 void ipi_handler() {
+  if (imsic_ipi_claim() != IPI_EIID) {
+    default_trap_handler();
+    return;
+  }
   uint64_t id = riscv_mhartid();
   atomic_printf("Core %d get ipi!\n", id);
-  clear_ipi(id);
 }
 
 int ipi_init() {
-  csr_set(mie, MSIE);
+  imsic_ipi_enable();
+  csr_set(mie, MEIE);
   csr_set(mstatus, (0x1UL << 3));
   return 0;
 }
@@ -73,7 +77,7 @@ int main() {
 
   uint64_t hartid = riscv_mhartid();
   ipi_init();
-  m_trap_handler_register(MSIP, ipi_handler);
+  m_trap_handler_register(MEIP, ipi_handler);
 
 
   if(hartid == 0){

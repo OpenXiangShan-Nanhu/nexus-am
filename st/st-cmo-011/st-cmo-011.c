@@ -20,14 +20,18 @@ extern uint64_t atomic_add(volatile uint64_t *addr, uint64_t adder);
 
 
 void ipi_handler() {
+  if (imsic_ipi_claim() != IPI_EIID) {
+    default_trap_handler();
+    return;
+  }
   uint64_t id = riscv_mhartid();
   atomic_printf("Core %d ipi handler\n", id);
   riscv_cbo_flush((uint64_t)pmem);
-  clear_ipi(id);
 }
 
 int ipi_init() {
-  csr_set(mie, MSIE);
+  imsic_ipi_enable();
+  csr_set(mie, MEIE);
   csr_set(mstatus, (0x1UL << 3));
   return 0;
 }
@@ -57,7 +61,7 @@ int main() {
   uint64_t hartid = riscv_mhartid();
   if(hartid == 0) {
     for(volatile int i = 1; i < NUM_CORES; i++) switch_on_core(i);
-    m_trap_handler_register(MSIP, ipi_handler);
+    m_trap_handler_register(MEIP, ipi_handler);
     ipi_init();
   }
   barrier(NUM_CORES);

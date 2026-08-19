@@ -2,11 +2,17 @@
 #define __LINKNAN_DACLINT_H__
 
 #include "platform.h"
+#include "plic.h"
 
 #define MTIME_ADDR(x)       (CPU_SPACE(x) + TIMER_OFFSET + MTIME_OFFSET)
 #define MTIMECMP_ADDR(x)    (CPU_SPACE(x) + TIMER_OFFSET + MTIMECMP_OFFSET)
-#define MSIP_ADDR(x)        (CPU_SPACE(x) + TIMER_OFFSET + MSIP_OFFSET)
-#define SSIP_ADDR(x)        (CPU_SPACE(x) + TIMER_OFFSET + SSIP_OFFSET)
+
+/* The ACLINT implements only the timer; IPIs are delivered as MSIs to the
+ * target hart's IMSIC M interrupt file (identity IPI_EIID). */
+#define IPI_EIID                     1UL
+#define IMSIC_M_FILE_ADDR(x)         (CPU_SPACE(x) + IMSIC_OFFSET + IMSIC_M_FILE_OFFSET)
+#define IMSIC_SETEIPNUM_ADDR(x)      (IMSIC_M_FILE_ADDR(x) + IMSIC_SETEIPNUM_OFFSET)
+#define IMSIC_CLREIPNUM_ADDR(x)      (IMSIC_M_FILE_ADDR(x) + IMSIC_CLREIPNUM_OFFSET)
 
 #define TIMER_FREQ              10000000UL
 
@@ -30,11 +36,23 @@ inline float ticks_to_s(uint64_t timer_val) {
 }
 
 inline void raise_ipi(int cpu) {
-  WRITE_U32(MSIP_ADDR(cpu), 0x1);
+  WRITE_U32(IMSIC_SETEIPNUM_ADDR(cpu), IPI_EIID);
 }
 
 inline void clear_ipi(int cpu) {
-  WRITE_U32(MSIP_ADDR(cpu), 0x0);
+  WRITE_U32(IMSIC_CLREIPNUM_ADDR(cpu), IPI_EIID);
+}
+
+/* Enable the local hart's IMSIC M file for IPI_EIID delivery (eie, eidelivery,
+ * eithreshold) via the machine-level AIA CSRs. */
+inline void imsic_ipi_enable(void) {
+  imsic_enable_machine(IPI_EIID);
+}
+
+/* Claim (and clear) the top pending IMSIC M file interrupt; returns the
+ * interrupt identity. */
+inline uint32_t imsic_ipi_claim(void) {
+  return imsic_claim_machine();
 }
 
 inline uint64_t read_timer() {

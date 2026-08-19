@@ -16,16 +16,20 @@ volatile int step = 0;
 extern void atomic_add(uint64_t *addr, uint64_t val);
 
 void ipi_handler() {
+  if (imsic_ipi_claim() != IPI_EIID) {
+    default_trap_handler();
+    return;
+  }
   uint64_t id = riscv_mhartid();
   atomic_printf("Core %d get ipi!\n", id);
-  clear_ipi(id);
   if(id == NUM_CORES-1) return;
   atomic_printf("Core %d try ipi to core %d\n", id, id+1);
   raise_ipi(id+1);
 }
 
 int ipi_init() {
-  csr_set(mie, MSIE);
+  imsic_ipi_enable();
+  csr_set(mie, MEIE);
   csr_set(mstatus, (0x1UL << 3));
   return 0;
 }
@@ -41,7 +45,7 @@ void task0() {
 
 void task1() {
   ipi_init();
-  if(m_trap_handler_register(MSIP, ipi_handler)) return;
+  if(m_trap_handler_register(MEIP, ipi_handler)) return;
 
   atomic_add((uint64_t *)&step, 1);
   riscv_wfi();

@@ -93,16 +93,20 @@ void riscv_wff() {
 
 // IPI中断处理 - 参考 app-001
 void ipi_handler() {
+    if (imsic_ipi_claim() != IPI_EIID) {
+      default_trap_handler();
+      return;
+    }
     uint64_t hartid = riscv_mhartid();
-    clear_ipi(hartid);
     flags[hartid] = 1;
     riscv_fence();
 }
 
 // 使能软件中断 - 参考 app-001
 void enable_softwareinterrupt() {
+    imsic_ipi_enable();
     uint64_t mie = csr_read(mie);
-    csr_write(mie, mie | MSIE);
+    csr_write(mie, mie | MEIE);
     uint64_t mstatus = csr_read(mstatus);
     csr_write(mstatus, mstatus | (0x1UL << 3));
 }
@@ -166,7 +170,7 @@ int main() {
     enable_softwareinterrupt();
     
     if (hartid == 0)
-        m_trap_handler_register(MSIP, ipi_handler);
+        m_trap_handler_register(MEIP, ipi_handler);
     barrier(NUM_CORES);
     
     srand(SEED);

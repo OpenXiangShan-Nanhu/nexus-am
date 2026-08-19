@@ -15,14 +15,18 @@ volatile int step = 0;
 volatile int *reg = (int *)0x90000000;
 
 void ipi_handler() {
+  if (imsic_ipi_claim() != IPI_EIID) {
+    default_trap_handler();
+    return;
+  }
   uint64_t id = riscv_mhartid();
   atomic_printf("Core %d get ipi!\n", id);
-  clear_ipi(id);
 }
 
 int ipi_init() {
+  imsic_ipi_enable();
   uint64_t mie = csr_read(mie);
-  csr_write(mie, mie | MSIE);
+  csr_write(mie, mie | MEIE);
 
   uint64_t mstatus = csr_read(mstatus);
   csr_write(mstatus, mstatus | (0x1UL << 3));
@@ -54,7 +58,7 @@ void task0() {
 
 void task1() {
   ipi_init();
-  if(m_trap_handler_register(MSIP, ipi_handler)) return;
+  if(m_trap_handler_register(MEIP, ipi_handler)) return;
   for(int i = 0; i < 100; i++){
     WRITE_U64(reg + i * 0x40, i);
   }

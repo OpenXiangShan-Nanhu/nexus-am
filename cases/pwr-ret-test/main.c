@@ -1,15 +1,18 @@
+// pwr-ret-test: power retention deny/accept test (AIA IMSIC replaced by the
+// per-CPU ACLINT MSWI mechanism).
+
 #include <am.h>
 #include <klib.h>
 #include <klib-macros.h>
 #include <printf.h>
 #include "ppu.h"
-#include "clint.h"
-#include "mtrap.h"
-#include "ppu.h"
 #include "csr.h"
 #include "platform.h"
 
 #define NUM_CORES 4
+
+#define MSIP_BIT  3
+#define MSWI_ADDR(x) (CPU_SPACE(x) + TIMER_OFFSET + 0x10)
 
 typedef enum {
   UNTEST = -1,
@@ -22,28 +25,15 @@ typedef enum {
 
 volatile flag_t power_flags[NUM_CORES];
 
-void ipi_handler() {
-  if (imsic_ipi_claim() != IPI_EIID) {
-    default_trap_handler();
-    return;
-  }
+static void raise_ipi(uint64_t hartid) {
+  WRITE_U32(MSWI_ADDR(hartid), 1);
 }
 
-int ipi_init() {
-  imsic_ipi_enable();
-  uint64_t mie = csr_read(mie);
-  csr_write(mie, mie | MEIE);
-
-  uint64_t mstatus = csr_read(mstatus);
-  csr_write(mstatus, mstatus | (0x1UL << 3));
-  return 0;
+static void clear_ipi(uint64_t hartid) {
+  WRITE_U32(MSWI_ADDR(hartid), 0);
 }
-
 
 void other_core(uint64_t id) {
-  if(m_trap_handler_register(MEIP, ipi_handler)) return ;
-  ipi_init();
-
   power_flags[id] = DONE;
   riscv_fence();
 
@@ -53,15 +43,16 @@ void other_core(uint64_t id) {
   power_flags[id] = DONE;
   riscv_fence();
 
-  // wait for ret accrpt test
-  riscv_wfi();
+  // wait for ret accept test
+  while(!(csr_read(mip) & (1UL << MSIP_BIT)));
+  clear_ipi(id);
+  riscv_fence();
   while(power_flags[id] != ACCEPT);
 
   atomic_printf("Core %d test finish!\n", id);
   power_flags[id] = FINISH;
   riscv_fence();
 }
-
 
 void first_core() {
   atomic_printf("Core 0 is powered on!\n");
@@ -90,7 +81,6 @@ void first_core() {
   riscv_fence();
 }
 
-
 int main() {
   uint64_t hartid = riscv_mhartid();
   if(hartid >= NUM_CORES) {
@@ -99,7 +89,6 @@ int main() {
   }
   else if(hartid == 0) first_core();
   else other_core(hartid);
-
 
   for(int i = 0; i < NUM_CORES; i++) while(power_flags[i] != FINISH);
   atomic_printf("All test finish\n");

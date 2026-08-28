@@ -1,14 +1,19 @@
+// pwr-dyn-test: dynamic power retention test (AIA IMSIC replaced by the
+// per-CPU ACLINT MSWI mechanism).  Core 0 powers on cores 1..3, then switches
+// them to PWR_RET and wakes them with an MSWI software interrupt.
+
 #include <am.h>
 #include <klib.h>
 #include <klib-macros.h>
 #include <printf.h>
-#include "clint.h"
-#include "mtrap.h"
 #include "ppu.h"
 #include "csr.h"
 #include "platform.h"
 
 #define NUM_CORES 4
+
+#define MSIP_BIT  3
+#define MSWI_ADDR(x) (CPU_SPACE(x) + TIMER_OFFSET + 0x10)
 
 typedef enum {
   UNTEST = -1,
@@ -21,33 +26,24 @@ typedef enum {
 
 volatile flag_t power_flags[NUM_CORES];
 
-void ipi_handler() {
-  if (imsic_ipi_claim() != IPI_EIID) {
-    default_trap_handler();
-    return;
-  }
+static void raise_ipi(uint64_t hartid) {
+  WRITE_U32(MSWI_ADDR(hartid), 1);
 }
 
-int ipi_init() {
-  imsic_ipi_enable();
-  uint64_t mie = csr_read(mie);
-  csr_write(mie, mie | MEIE);
-
-  uint64_t mstatus = csr_read(mstatus);
-  csr_write(mstatus, mstatus | (0x1UL << 3));
-  return 0;
+static void clear_ipi(uint64_t hartid) {
+  WRITE_U32(MSWI_ADDR(hartid), 0);
 }
 
 void other_core(uint64_t id) {
-  if(m_trap_handler_register(MEIP, ipi_handler)) return ;
-  ipi_init();
   while(power_flags[id] == UNTEST);
   power_flags[id] = DONE;
   riscv_fence();
 
   // wait for dyn test
   while(power_flags[id] != UNTEST);
-  riscv_wfi();
+  while(!(csr_read(mip) & (1UL << MSIP_BIT)));
+  clear_ipi(id);
+  riscv_fence();
 
   atomic_printf("Core %d test finish!\n", id);
   power_flags[id] = FINISH;

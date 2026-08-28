@@ -1,58 +1,73 @@
+// ipi: per-CPU ACLINT MSWI software-interrupt test (the AIA IMSIC mechanism
+// has been removed).  Core 0 raises an IPI to core 1 through the MSWI
+// register (CPU_SPACE(x) + TIMER_OFFSET + 0x10); each core polls its MSIP
+// pending bit, clears the MSWI register and raises the IPI for the next core
+// in the ring, for IPI_ITERATION full rings.
+
 #include <am.h>
 #include <klib.h>
 #include <klib-macros.h>
-#include "clint.h"
-#include "mtrap.h"
+#include <stdint.h>
 #include "ppu.h"
 #include "csr.h"
 #include "platform.h"
-#include <stdint.h>
 
-#define NUM_CORES 4
-#define IPI_ITERATION 4
+#define NUM_CORES      4
+#define IPI_ITERATION  4
+
+#define MSIP_BIT       3
+#define MSWI_ADDR(x)   (CPU_SPACE(x) + TIMER_OFFSET + 0x10)
 
 volatile uint8_t ipi_iter_cnt = 0;
+volatile int     ipi_done     = 0;
 
-void ipi_handler() {
-  if (imsic_ipi_claim() != IPI_EIID) {
-    default_trap_handler();
-    return;
-  }
-  uint64_t id = riscv_mhartid();
-  atomic_printf("Core %lu: IPI raised!\n", id);
-  if(id == 0) {
-    ipi_iter_cnt ++;
-    riscv_fence();
-    if(ipi_iter_cnt >= IPI_ITERATION) return;
-  }
-  raise_ipi((id + 1) % NUM_CORES);
+static void raise_ipi(uint64_t hartid) {
+  WRITE_U32(MSWI_ADDR(hartid), 1);
 }
 
-int ipi_init() {
-  imsic_ipi_enable();
-  uint64_t mie = csr_read(mie);
-  csr_write(mie, mie | MEIE);
-
-  uint64_t mstatus = csr_read(mstatus);
-  csr_write(mstatus, mstatus | (0x1UL << 3));
-  return 0;
+static void clear_ipi(uint64_t hartid) {
+  WRITE_U32(MSWI_ADDR(hartid), 0);
 }
 
 int main() {
   uint64_t id = riscv_mhartid();
-  atomic_printf("Core %lu is started!\n", id);
   if(id == 0) {
-    if(m_trap_handler_register(MEIP, ipi_handler)) return 1;
-    for(int i = 0; i < NUM_CORES; i++) switch_on_core(i);
+    for(int i = 1; i < NUM_CORES; i++) switch_on_core(i);
   }
-  ipi_init();
+  /* enable M-mode software interrupts on every core (mstatus.MIE stays off,
+   * so the pending bit is polled instead of taking a trap) */
+  csr_write(mie, csr_read(mie) | (1UL << MSIP_BIT));
   if(barrier(NUM_CORES)) return 1;
+
   if(id == 0) {
     printf("IPI test started!\n");
-    raise_ipi((id + 1) % NUM_CORES);
-    while(ipi_iter_cnt < IPI_ITERATION) riscv_wfi();
-  } else {
-    while(1) riscv_wfi();
+    raise_ipi(1);
   }
-  printf("IPI test passed!\n");
+
+  /* ring: core i forwards the IPI to core (i+1) % NUM_CORES */
+  while(!ipi_done) {
+    while(!(csr_read(mip) & (1UL << MSIP_BIT))) {
+      if(ipi_done) break;
+    }
+    if(ipi_done) break;
+    clear_ipi(id);
+    riscv_fence();
+    atomic_printf("Core %lu: IPI raised!\n", id);
+    if(id == 0) {
+      ipi_iter_cnt++;
+      if(ipi_iter_cnt >= IPI_ITERATION) {
+        riscv_fence();
+        ipi_done = 1;
+        break;
+      }
+    }
+    raise_ipi((id + 1) % NUM_CORES);
+  }
+
+  if(barrier(NUM_CORES)) return 1;
+  if(id == 0) printf("IPI test passed!\n");
+  /* second barrier: the verdict print must reach the UART before any core
+   * halts (the sim finishes on the first halt) */
+  if(barrier(NUM_CORES)) return 1;
+  return 0;
 }

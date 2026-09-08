@@ -12,6 +12,16 @@
 #define NUM_CORES 4
 #define ITERATION 1
 
+_Static_assert(PLIC_BASE_ADDR == 0x3c000000UL, "PLIC test requires the new PLIC base");
+_Static_assert(INTR_PRIO_REG(1 + 1) == 0x3c000008UL, "Unexpected PLIC priority stride");
+_Static_assert(INTR_EN_REG(2 + 4, NR_INTR / 32) == 0x3c002320UL,
+               "Unexpected PLIC enable map");
+_Static_assert(CTX_THD_REG(0) == 0x3c200000UL &&
+               CTX_COMP_REG((NUM_CORES - 1) * 2) == 0x3c206004UL,
+               "Unexpected PLIC context map");
+_Static_assert(PWPR(0) == 0x01001000UL && PWSR(3) == 0x010c1004UL,
+               "Unexpected PPU startup map");
+
 volatile uint8_t iter_cnt = 0;
 
 void intr_handler() {
@@ -58,6 +68,8 @@ int main() {
   uint64_t id = riscv_mhartid();
   atomic_printf("Core %lu is started!\n", id);
   if(id == 0) {
+    printf("PLIC map: base=0x%lx enable[0]=0x%lx claim[0]=0x%lx PPU[0]=0x%lx interrupts=1..%d\n",
+           PLIC_BASE_ADDR, INTR_EN_REG(0, 0), CTX_COMP_REG(0), PPU_ADDR(0), NR_INTR);
     if(setup_plic()) return 1;
     printf("PLIC is initialized!\n");
     if(m_trap_handler_register(MEIP, intr_handler)) return 1;

@@ -3,7 +3,7 @@
 
 #include "stdint.h"
 
-#define CPU_SPACE_BITS 20
+#define CPU_SPACE_BITS 18
 #define NR_INTR        256
 
 #define READ_U8(addr)        (*((volatile uint8_t *)(addr)))
@@ -18,7 +18,7 @@
 #define READ_U64(addr)        (*((volatile uint64_t *)(addr)))
 #define WRITE_U64(addr, data) (*((volatile uint64_t *)(addr)) = (data))
 
-#define CPU_SPACE(x) (0x0000000000L | ((x & 0x1f) << CPU_SPACE_BITS))
+#define CPU_SPACE(x) (0x01000000UL + ((unsigned long)(x) << CPU_SPACE_BITS))
 
 #define BIT(n) (1UL << (n))
 #define GENMASK(h, l) ((BIT((h)+1) - 1) & ~(BIT(l) - 1))
@@ -30,8 +30,8 @@
 #define BOOT_ADDR_OFFSET        0x0000UL
 #define PPU_OFFSET              0x1000UL
 
-#define CLINT_BASE_ADDR         0x01000000UL
-#define PLIC_BASE_ADDR          0x04000000UL
+#define CLINT_BASE_ADDR         0x38000000UL
+#define PLIC_BASE_ADDR          0x3c000000UL
 #define INTR_GEN_ADDR           0x40070000UL
 
 #define L1D_SIZE 64 * 1024

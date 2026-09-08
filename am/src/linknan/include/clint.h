@@ -3,10 +3,10 @@
 
 #include "platform.h"
 
-#define MTIMECMP_ADDR(x)       (CLINT_BASE_ADDR + 0x4000 + x * 0x8)
-#define MSIP_ADDR(x)           (CLINT_BASE_ADDR + 0x0000 + x * 0x4)
+#define MTIMECMP_ADDR(x)       (CLINT_BASE_ADDR + 0x4000UL + (unsigned long)(x) * 0x8UL)
+#define MSIP_ADDR(x)           (CLINT_BASE_ADDR + (unsigned long)(x) * 0x4UL)
 
-#define TIMER_FREQ              12000000UL
+#define TIMER_FREQ              10000000UL
 
 #define SECOND                  TIMER_FREQ
 #define MILISECOND              (TIMER_FREQ / 1000UL)

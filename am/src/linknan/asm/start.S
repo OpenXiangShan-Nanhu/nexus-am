@@ -46,6 +46,10 @@ _start:
   csrr t4, mhartid
   mul t5, t3, t4
   add sp, t5, t1
+
+  # LinkNan Smrnmi startup: NMIE resets low and also gates normal interrupts.
+  # Enable it on every hart (including power-off restart) after mtvec and sp.
+  csrsi 0x744, 8
 #   bnez t4, _skip_bss
 
 #   la t0, _bss_start
